@@ -1,0 +1,3426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Stone Garden · Go AI v4</title>
+<meta name="description" content="Premium Go board game with Minimax α-β AI — Zobrist super-ko, Japanese scoring, SGF import/export, review mode, capture particles.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   STONE GARDEN · Go AI v4
+   Design System — Dark Premium Japanese Ink Aesthetic
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Design Tokens ─────────────────────────────────────────── */
+:root {
+  /* Background layers */
+  --bg:           #0D0B09;
+  --surface:      #141210;
+  --surface2:     #1C1916;
+  --surface3:     #242018;
+
+  /* Wood & warmth */
+  --wood:         #C8923A;
+  --wood-dk:      #8A5A18;
+  --wood-md:      #A87428;
+  --wood-lt:      #E0A844;
+  --gold:         #D4A246;
+  --gold-lt:      #E8BE6A;
+
+  /* Text hierarchy */
+  --text:         #F0E8D8;
+  --text2:        #C8BCAA;
+  --muted:        #8A7E6E;
+  --muted2:       #5A5040;
+
+  /* Semantic */
+  --green:        #4CAF80;
+  --blue:         #4A8FA8;
+  --purple:       #9B7EDE;
+  --red:          #E05545;
+
+  /* Borders */
+  --border:       rgba(255,235,195,.05);
+  --border2:      rgba(255,235,195,.11);
+  --border3:      rgba(255,235,195,.20);
+
+  /* Elevation shadows */
+  --shadow-sm:    0 1px 4px rgba(0,0,0,.55);
+  --shadow-md:    0 4px 20px rgba(0,0,0,.6), 0 1px 4px rgba(0,0,0,.4);
+  --shadow-lg:    0 8px 48px rgba(0,0,0,.7), 0 2px 12px rgba(0,0,0,.5);
+  --shadow-board: 0 0 0 1px rgba(150,90,20,.35),
+                  0 8px 32px rgba(0,0,0,.7),
+                  0 24px 80px rgba(0,0,0,.5),
+                  inset 0 1px 0 rgba(255,220,120,.06);
+
+  /* Motion */
+  --ease-out:     cubic-bezier(.22,1,.36,1);
+  --ease-spring:  cubic-bezier(.34,1.56,.64,1);
+  --trans:        .14s var(--ease-out);
+  --trans-md:     .25s var(--ease-out);
+  --trans-lg:     .4s  var(--ease-out);
+}
+
+/* ── Reset ──────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% 90%, rgba(200,146,58,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 85% 10%, rgba(155,126,222,.04) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════════════════════════ */
+
+.app {
+  display: grid;
+  grid-template-columns: 200px 1fr 280px;
+  grid-template-rows: auto 1fr auto;
+  width: 100%;
+  max-width: 1160px;
+  padding: 0 28px;
+}
+
+/* ── Masthead ───────────────────────────────────────────────── */
+.masthead {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 28px 0 22px;
+  border-bottom: 1px solid var(--border2);
+}
+
+.logotype {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 27px;
+  font-weight: 300;
+  letter-spacing: .06em;
+  color: var(--text);
+  flex-shrink: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+.logotype em {
+  color: var(--wood-lt);
+  font-style: italic;
+  font-weight: 400;
+}
+.logotype sup {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .1em;
+  color: var(--muted);
+  font-style: normal;
+  vertical-align: super;
+  font-weight: 300;
+}
+
+.masthead-tags {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-size: 7.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: .5px solid var(--border2);
+  padding: 3px 8px 3px;
+  border-radius: 2px;
+  transition: all var(--trans);
+  white-space: nowrap;
+  background: transparent;
+}
+.tag--live {
+  background: rgba(76,175,128,.12);
+  border-color: rgba(76,175,128,.3);
+  color: var(--green);
+}
+.tag--ai {
+  background: rgba(200,146,58,.15);
+  border-color: rgba(200,146,58,.35);
+  color: var(--wood-lt);
+}
+.tag--over {
+  background: rgba(224,85,69,.12);
+  border-color: rgba(224,85,69,.25);
+  color: var(--red);
+}
+.tag--review {
+  background: rgba(155,126,222,.12);
+  border-color: rgba(155,126,222,.3);
+  color: var(--purple);
+}
+
+.masthead-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: .5px solid var(--border2);
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 14px;
+  transition: all var(--trans);
+  font-family: inherit;
+  outline: none;
+}
+.icon-btn:hover {
+  background: var(--surface3);
+  border-color: var(--border3);
+  color: var(--text);
+}
+.icon-btn:focus-visible {
+  outline: 1.5px solid var(--wood);
+  outline-offset: 1px;
+}
+.icon-btn--hint-active {
+  border-color: rgba(76,175,128,.4);
+  color: var(--green);
+  background: rgba(76,175,128,.08);
+}
+
+/* ── Left Panel ─────────────────────────────────────────────── */
+.panel-left {
+  grid-column: 1 / 2;
+  padding: 32px 20px 32px 0;
+  display: flex;
+  flex-direction: column;
+  border-right: .5px solid var(--border);
+}
+
+.panel-move-number {
+  margin-bottom: 20px;
+}
+.move-num-display {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 72px;
+  font-weight: 300;
+  color: var(--text);
+  line-height: .88;
+  letter-spacing: -.03em;
+  opacity: .08;
+  font-variant-numeric: tabular-nums;
+}
+.move-num-label {
+  font-size: 7.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  margin-top: 4px;
+}
+
+.info-table {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: auto;
+  gap: 0;
+}
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: .5px solid var(--border);
+  gap: 8px;
+}
+.info-key {
+  font-size: 8px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  flex-shrink: 0;
+}
+.info-val {
+  font-size: 9.5px;
+  color: var(--text2);
+  font-weight: 400;
+  text-align: right;
+}
+.info-val--highlight {
+  color: var(--gold);
+}
+
+.eval-section {
+  margin-top: 24px;
+}
+.eval-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 7.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  margin-bottom: 8px;
+}
+.eval-track {
+  height: 3px;
+  background: var(--surface3);
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
+}
+.eval-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--text), var(--text2));
+  border-radius: 99px;
+  transition: width .9s var(--ease-out);
+}
+.eval-scores {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+.eval-score {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.eval-vs {
+  font-size: 8px;
+  color: var(--muted2);
+  letter-spacing: .08em;
+}
+
+.terr-legend {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px 0 0;
+  border-top: .5px solid var(--border);
+}
+.terr-legend.show { display: flex; }
+.terr-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: .06em;
+}
+.terr-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Board Zone ─────────────────────────────────────────────── */
+.board-zone {
+  grid-column: 2 / 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 32px;
+}
+
+.board-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+#board {
+  display: block;
+  border-radius: 5px;
+  cursor: crosshair;
+  box-shadow: var(--shadow-board);
+  transition: box-shadow var(--trans-md), filter var(--trans-md);
+}
+#board.state--ai-turn    { cursor: not-allowed; filter: brightness(.97); }
+#board.state--over       { cursor: default; }
+#board.state--review     {
+  cursor: default;
+  box-shadow: 0 0 0 2px rgba(155,126,222,.45),
+              0 8px 32px rgba(0,0,0,.7),
+              0 24px 80px rgba(0,0,0,.5);
+}
+
+/* ── Game Over Overlay ──────────────────────────────────────── */
+.game-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(13,11,9,.88);
+  border-radius: 5px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  backdrop-filter: blur(12px) saturate(.6);
+  text-align: center;
+  z-index: 20;
+  padding: 32px;
+}
+.game-overlay.show {
+  display: flex;
+  animation: overlayReveal .45s var(--ease-out) both;
+}
+@keyframes overlayReveal {
+  from { opacity: 0; transform: scale(.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.overlay-winner {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 48px;
+  font-weight: 300;
+  letter-spacing: .04em;
+  color: var(--text);
+  line-height: 1;
+}
+.overlay-winner em {
+  font-style: italic;
+  color: var(--gold-lt);
+}
+.overlay-margin {
+  font-size: 9px;
+  letter-spacing: .12em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.overlay-scores {
+  display: flex;
+  gap: 24px;
+  font-size: 10px;
+  color: var(--muted);
+  border-top: .5px solid var(--border2);
+  border-bottom: .5px solid var(--border2);
+  padding: 10px 32px;
+}
+.overlay-scores strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.overlay-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.btn-overlay {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  padding: 9px 18px;
+  border: .5px solid var(--border2);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all var(--trans);
+  outline: none;
+}
+.btn-overlay:hover {
+  background: var(--surface2);
+  border-color: var(--border3);
+  color: var(--text);
+}
+.btn-overlay--primary {
+  background: var(--wood);
+  border-color: var(--wood);
+  color: #0D0B09;
+  font-weight: 600;
+}
+.btn-overlay--primary:hover {
+  background: var(--wood-lt);
+  border-color: var(--wood-lt);
+}
+
+/* ── Right Panel ────────────────────────────────────────────── */
+.panel-right {
+  grid-column: 3 / 4;
+  padding: 32px 0 32px 24px;
+  border-left: .5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: .5px solid var(--border);
+  margin-bottom: 18px;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+  transition: background var(--trans-md), border-color var(--trans-md);
+}
+.status-dot--black   { background: var(--text); }
+.status-dot--white   { background: transparent; border: 1.5px solid var(--text2); }
+.status-dot--thinking {
+  background: var(--gold);
+  animation: dotPulse .7s ease-in-out infinite alternate;
+}
+.status-dot--over    { background: var(--red); animation: none; }
+.status-dot--review  { background: var(--purple); animation: dotPulse .7s ease-in-out infinite alternate; }
+@keyframes dotPulse {
+  to { opacity: .2; transform: scale(.6); }
+}
+
+.status-content {}
+.status-text {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.status-sub {
+  font-size: 8.5px;
+  color: var(--muted);
+  letter-spacing: .07em;
+  margin-top: 3px;
+  min-height: 14px;
+}
+
+/* Player rows */
+.players {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: .5px solid var(--border);
+}
+.player-stone {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.player-stone--black {
+  background: radial-gradient(circle at 36% 30%, #5A5450, #0A0906);
+  box-shadow: inset -1.5px -1.5px 3px rgba(0,0,0,.6),
+              inset 1px 1px 2px rgba(255,255,255,.1),
+              0 2px 6px rgba(0,0,0,.5);
+}
+.player-stone--white {
+  background: radial-gradient(circle at 36% 30%, #ffffff, #D0C8B8);
+  box-shadow: inset -1px -1px 3px rgba(0,0,0,.14),
+              inset 1px 1px 3px rgba(255,255,255,.95),
+              0 0 0 .5px rgba(200,180,140,.4),
+              0 2px 6px rgba(0,0,0,.4);
+}
+.player-info { flex: 1; }
+.player-name {
+  font-size: 11.5px;
+  color: var(--text);
+  letter-spacing: .02em;
+}
+.player-role {
+  font-size: 8px;
+  color: var(--muted2);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.player-caps {
+  font-size: 8.5px;
+  color: var(--muted);
+  text-align: right;
+  line-height: 1.4;
+}
+.player-caps-count {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Capture bar */
+.capture-track {
+  height: 2px;
+  background: var(--surface3);
+  margin-bottom: 20px;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.capture-fill {
+  height: 100%;
+  background: var(--text);
+  border-radius: 99px;
+  transition: width .6s var(--ease-out);
+}
+
+/* Move history */
+.hist-header {
+  font-size: 7.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  margin-bottom: 8px;
+}
+.hist-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface3) transparent;
+}
+.hist-list::-webkit-scrollbar { width: 2px; }
+.hist-list::-webkit-scrollbar-thumb { background: var(--surface3); }
+.hist-empty {
+  font-size: 10px;
+  color: var(--muted2);
+  font-style: italic;
+  padding: 6px 0;
+  letter-spacing: .04em;
+}
+.hist-row {
+  display: grid;
+  grid-template-columns: 22px 10px 1fr auto;
+  gap: 7px;
+  align-items: center;
+  font-size: 9px;
+  padding: 3.5px 5px;
+  opacity: .38;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: opacity var(--trans), background var(--trans);
+  letter-spacing: .03em;
+}
+.hist-row:hover  { opacity: .8; background: var(--surface2); }
+.hist-row--latest { opacity: .92; }
+.hist-row--review-curr {
+  opacity: 1;
+  background: rgba(155,126,222,.1);
+  border-left: 2px solid var(--purple);
+  padding-left: 3px;
+}
+.hist-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.hist-row--black .hist-dot { background: var(--text); }
+.hist-row--white .hist-dot { background: transparent; border: 1px solid var(--text2); }
+.hist-num   { font-size: 8px; color: var(--muted2); }
+.hist-coord { color: var(--text2); }
+.hist-cap   { font-size: 8px; color: var(--red); font-weight: 500; }
+
+/* Review bar */
+.review-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(155,126,222,.07);
+  border: .5px solid rgba(155,126,222,.18);
+  border-radius: 4px;
+  margin-top: 10px;
+}
+.review-bar.show { display: flex; }
+.review-bar-label {
+  font-size: 7.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--purple);
+  flex: 1;
+}
+.review-bar-pos {
+  font-size: 9px;
+  color: var(--purple);
+  font-variant-numeric: tabular-nums;
+}
+.review-nav { display: flex; gap: 3px; }
+.review-nav-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: .5px solid rgba(155,126,222,.25);
+  color: var(--purple);
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 13px;
+  transition: all var(--trans);
+  outline: none;
+}
+.review-nav-btn:hover { background: rgba(155,126,222,.14); }
+.review-nav-btn:disabled { opacity: .22; cursor: not-allowed; }
+
+/* Controls */
+.controls {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: .5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ctrl-row { display: flex; gap: 5px; }
+.btn {
+  flex: 1;
+  padding: 8px 6px;
+  background: transparent;
+  border: .5px solid var(--border2);
+  color: var(--muted);
+  font-size: 7.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all var(--trans);
+  white-space: nowrap;
+  outline: none;
+}
+.btn:hover {
+  background: var(--surface2);
+  border-color: var(--border3);
+  color: var(--text2);
+}
+.btn:active  { transform: scale(.97); }
+.btn--active {
+  border-color: rgba(76,175,128,.35);
+  color: var(--green);
+  background: rgba(76,175,128,.07);
+}
+.btn--active:hover {
+  background: rgba(76,175,128,.14);
+  color: var(--green);
+}
+.btn--primary {
+  background: var(--wood);
+  border-color: var(--wood);
+  color: #0D0B09;
+  font-weight: 600;
+}
+.btn--primary:hover {
+  background: var(--wood-lt);
+  border-color: var(--wood-lt);
+  color: #0D0B09;
+}
+.btn--danger {
+  border-color: rgba(224,85,69,.28);
+  color: rgba(224,85,69,.7);
+}
+.btn--danger:hover {
+  background: rgba(224,85,69,.12);
+  border-color: rgba(224,85,69,.45);
+  color: var(--red);
+}
+.btn--review {
+  border-color: rgba(155,126,222,.28);
+  color: rgba(155,126,222,.7);
+}
+.btn--review:hover {
+  background: rgba(155,126,222,.1);
+  border-color: rgba(155,126,222,.4);
+  color: var(--purple);
+}
+.btn:disabled { opacity: .25; cursor: not-allowed; transform: none; }
+.kb-hint {
+  font-size: 7px;
+  color: var(--muted2);
+  letter-spacing: .07em;
+  text-align: center;
+  margin-top: 3px;
+  opacity: .55;
+}
+
+/* Loading dots */
+.ldots span {
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--gold);
+  margin: 0 1.5px;
+  animation: ldot .8s ease-in-out infinite;
+}
+.ldots span:nth-child(2) { animation-delay: .15s; }
+.ldots span:nth-child(3) { animation-delay: .30s; }
+@keyframes ldot {
+  0%, 80%, 100% { transform: translateY(0); }
+  40%           { transform: translateY(-4px); }
+}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.footer-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 28px;
+  border-top: .5px solid var(--border);
+}
+.footer-copy {
+  font-size: 8px;
+  color: var(--muted2);
+  letter-spacing: .1em;
+}
+.footer-pills {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.pill {
+  font-size: 7px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  border: .5px solid var(--border);
+  color: var(--muted2);
+  padding: 2.5px 7px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODAL SYSTEM
+   ═══════════════════════════════════════════════════════════════ */
+
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(13,11,9,.72);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px) saturate(.7);
+}
+.modal-backdrop.open { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border: .5px solid var(--border2);
+  border-radius: 6px;
+  padding: 36px;
+  width: 440px;
+  max-width: 96vw;
+  box-shadow: var(--shadow-lg), 0 0 0 .5px var(--border);
+  animation: modalReveal .22s var(--ease-out) both;
+}
+@keyframes modalReveal {
+  from { opacity: 0; transform: translateY(12px) scale(.97); }
+}
+.modal-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: .04em;
+  color: var(--text);
+  margin-bottom: 26px;
+}
+.modal-section { margin-bottom: 20px; }
+.modal-label {
+  font-size: 8px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  margin-bottom: 10px;
+  display: block;
+}
+.option-group {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.opt {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 8px;
+  background: transparent;
+  border: .5px solid var(--border2);
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: .06em;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all var(--trans);
+  text-align: center;
+  outline: none;
+}
+.opt:hover {
+  border-color: var(--border3);
+  color: var(--text2);
+  background: var(--surface2);
+}
+.opt--sel {
+  background: var(--wood);
+  border-color: var(--wood);
+  color: #0D0B09;
+  font-weight: 600;
+}
+.opt--sel:hover {
+  background: var(--wood-lt);
+  border-color: var(--wood-lt);
+  color: #0D0B09;
+}
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+.modal-actions .btn {
+  font-size: 9px;
+}
+.komi-custom-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.komi-custom-label {
+  font-size: 8px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+.komi-input {
+  width: 76px;
+  padding: 7px;
+  background: var(--surface2);
+  border: .5px solid var(--border2);
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  text-align: center;
+  outline: none;
+  transition: border-color var(--trans);
+}
+.komi-input:focus { border-color: var(--wood); }
+
+/* SGF textarea */
+.sgf-textarea {
+  width: 100%;
+  height: 96px;
+  resize: vertical;
+  background: var(--surface2);
+  border: .5px solid var(--border2);
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  color: var(--text2);
+  padding: 10px;
+  letter-spacing: .04em;
+  line-height: 1.6;
+  outline: none;
+  transition: border-color var(--trans);
+}
+.sgf-textarea:focus { border-color: var(--border3); }
+.sgf-import-textarea {
+  height: 80px;
+  margin-top: 8px;
+}
+.import-error {
+  font-size: 9px;
+  color: var(--red);
+  margin-top: 6px;
+  display: none;
+  letter-spacing: .04em;
+}
+.import-error.show { display: block; }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 920px) {
+  .app { grid-template-columns: 0 1fr 250px; padding: 0 14px; }
+  .panel-left { display: none; }
+  .panel-right { padding-left: 16px; }
+}
+@media (max-width: 680px) {
+  .app { grid-template-columns: 1fr; padding: 0 12px; }
+  .panel-right { display: none; }
+  .board-zone { padding: 20px 0; }
+  .masthead { padding: 18px 0 16px; }
+  .logotype { font-size: 21px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══════════ MASTHEAD ═══════════════════════════════════ -->
+  <header class="masthead">
+    <h1 class="logotype">Stone Garden &mdash; <em>Go AI</em> <sup>v4</sup></h1>
+    <div class="masthead-tags">
+      <span class="tag" id="tagSize">5×5</span>
+      <span class="tag">Minimax</span>
+      <span class="tag">α-β · TT</span>
+      <span class="tag" id="tagDiff">Intermediate</span>
+      <span class="tag tag--live" id="tagTurn">Your Turn</span>
+    </div>
+    <div class="masthead-actions">
+      <button class="icon-btn" id="hintBtn" title="Hint [H]" onclick="requestHint()">◎</button>
+      <button class="icon-btn" title="SGF Export / Import [S]" onclick="openSGF()">↓</button>
+      <button class="icon-btn" title="Settings [,]" onclick="openSettings()">⚙</button>
+    </div>
+  </header>
+
+  <!-- ═══════════ LEFT PANEL ════════════════════════════════= -->
+  <aside class="panel-left">
+    <div class="panel-move-number">
+      <div class="move-num-display" id="moveNumDisplay">00</div>
+      <div class="move-num-label">Move</div>
+    </div>
+
+    <div class="info-table">
+      <div class="info-row">
+        <span class="info-key">Algorithm</span>
+        <span class="info-val">Minimax</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Pruning</span>
+        <span class="info-val">Alpha-Beta</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Trans. table</span>
+        <span class="info-val info-val--highlight">Active</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Ko rule</span>
+        <span class="info-val">Super-ko</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Scoring</span>
+        <span class="info-val">Japanese</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Komi</span>
+        <span class="info-val info-val--highlight" id="komiDisplay">2.5</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Nodes / s</span>
+        <span class="info-val" id="nodesDisplay">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Search depth</span>
+        <span class="info-val" id="depthDisplay">—</span>
+      </div>
+    </div>
+
+    <div class="eval-section">
+      <div class="eval-labels">
+        <span>◆ Black</span>
+        <span>White ◆</span>
+      </div>
+      <div class="eval-track">
+        <div class="eval-fill" id="evalFill" style="width:50%"></div>
+      </div>
+      <div class="eval-scores">
+        <span class="eval-score" id="evalBlack">—</span>
+        <span class="eval-vs">score</span>
+        <span class="eval-score" id="evalWhite">—</span>
+      </div>
+      <div class="terr-legend" id="terrLegend">
+        <div class="terr-legend-row">
+          <div class="terr-legend-dot" style="background:rgba(240,232,216,.22)"></div>
+          Black territory
+        </div>
+        <div class="terr-legend-row">
+          <div class="terr-legend-dot" style="background:rgba(200,146,58,.3)"></div>
+          White territory
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════ BOARD ZONE ════════════════════════════════= -->
+  <main class="board-zone">
+    <div class="board-wrap">
+      <canvas id="board"></canvas>
+      <div class="game-overlay" id="gameOverlay">
+        <div class="overlay-winner" id="overlayWinner">—</div>
+        <div class="overlay-margin" id="overlayMargin">—</div>
+        <div class="overlay-scores">
+          <div>Black<strong id="overlayScoreB">—</strong></div>
+          <div style="color:var(--muted)">vs</div>
+          <div>White<strong id="overlayScoreW">—</strong></div>
+        </div>
+        <div class="overlay-actions">
+          <button class="btn-overlay" onclick="enterReview()">Review Game</button>
+          <button class="btn-overlay" onclick="openSGF()">Export SGF</button>
+          <button class="btn-overlay btn-overlay--primary" onclick="newGame()">Play Again</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══════════ RIGHT PANEL ═══════════════════════════════= -->
+  <aside class="panel-right">
+
+    <div class="status-bar">
+      <div class="status-dot status-dot--black" id="statusDot"></div>
+      <div class="status-content">
+        <div class="status-text" id="statusText">Your move</div>
+        <div class="status-sub" id="statusSub"></div>
+      </div>
+    </div>
+
+    <div class="players">
+      <div class="player-row">
+        <div class="player-stone player-stone--black"></div>
+        <div class="player-info">
+          <div class="player-name">You</div>
+          <div class="player-role">Black · First</div>
+        </div>
+        <div class="player-caps">
+          <span class="player-caps-count" id="capBlack">0</span>
+          cap
+        </div>
+      </div>
+      <div class="player-row">
+        <div class="player-stone player-stone--white"></div>
+        <div class="player-info">
+          <div class="player-name" id="aiName">AI</div>
+          <div class="player-role" id="aiRole">White · Minimax</div>
+        </div>
+        <div class="player-caps">
+          <span class="player-caps-count" id="capWhite">0</span>
+          cap
+        </div>
+      </div>
+    </div>
+
+    <div class="capture-track">
+      <div class="capture-fill" id="captureFill" style="width:50%"></div>
+    </div>
+
+    <div class="hist-header">Move Record</div>
+    <div class="hist-list" id="histList">
+      <div class="hist-empty">Waiting for first move…</div>
+    </div>
+
+    <!-- Review bar -->
+    <div class="review-bar" id="reviewBar">
+      <span class="review-bar-label">Review Mode</span>
+      <span class="review-bar-pos" id="reviewPos">0 / 0</span>
+      <div class="review-nav">
+        <button class="review-nav-btn" id="revFirst" title="First [Home]"  onclick="reviewGoTo(0)">«</button>
+        <button class="review-nav-btn" id="revPrev"  title="Prev [←]"     onclick="reviewStep(-1)">‹</button>
+        <button class="review-nav-btn" id="revNext"  title="Next [→]"     onclick="reviewStep(1)">›</button>
+        <button class="review-nav-btn" id="revLast"  title="Last [End]"   onclick="reviewGoTo(Infinity)">»</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="ctrl-row">
+        <button class="btn" id="terrBtn"   onclick="toggleTerr()">Territory [T]</button>
+        <button class="btn" id="numsBtn"   onclick="toggleNums()">Numbers [N]</button>
+      </div>
+      <div class="ctrl-row">
+        <button class="btn" id="undoBtn"   onclick="doUndo()">Undo [Z]</button>
+        <button class="btn" id="redoBtn"   onclick="doRedo()">Redo [Y]</button>
+      </div>
+      <div class="ctrl-row">
+        <button class="btn"              onclick="doPass()">Pass [P]</button>
+        <button class="btn btn--danger"  onclick="doResign()">Resign [Q]</button>
+      </div>
+      <div class="ctrl-row">
+        <button class="btn btn--review" id="reviewBtn" onclick="toggleReview()">Review [↵]</button>
+        <button class="btn btn--primary"               onclick="newGame()">New Game [R]</button>
+      </div>
+      <div class="kb-hint">H=hint · S=sgf · ,=settings · ←→=navigate</div>
+    </div>
+  </aside>
+
+  <!-- ═══════════ FOOTER ════════════════════════════════════= -->
+  <footer class="footer-bar">
+    <span class="footer-copy">Stone Garden · Go AI v4 · © 2025</span>
+    <div class="footer-pills">
+      <span class="pill">Canvas 2D</span>
+      <span class="pill">Zobrist Hash</span>
+      <span class="pill">α-β Pruning</span>
+      <span class="pill">Trans. Table</span>
+      <span class="pill">Super-ko</span>
+      <span class="pill">Japanese Scoring</span>
+      <span class="pill">SGF I/O</span>
+    </div>
+  </footer>
+</div>
+
+<!-- ═══════════ SETTINGS MODAL ════════════════════════════════ -->
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title">Settings</div>
+
+    <div class="modal-section">
+      <span class="modal-label">Board Size</span>
+      <div class="option-group" id="sizeOpts">
+        <button class="opt opt--sel" data-val="5"  onclick="selectOpt('sizeOpts',this,()=>setPending('size',5))">5 × 5</button>
+        <button class="opt"          data-val="7"  onclick="selectOpt('sizeOpts',this,()=>setPending('size',7))">7 × 7</button>
+        <button class="opt"          data-val="9"  onclick="selectOpt('sizeOpts',this,()=>setPending('size',9))">9 × 9</button>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <span class="modal-label">AI Difficulty</span>
+      <div class="option-group" id="diffOpts">
+        <button class="opt"          data-val="beginner"     onclick="selectOpt('diffOpts',this,()=>setPending('diff','beginner'))">Beginner</button>
+        <button class="opt opt--sel" data-val="intermediate" onclick="selectOpt('diffOpts',this,()=>setPending('diff','intermediate'))">Intermediate</button>
+        <button class="opt"          data-val="strong"       onclick="selectOpt('diffOpts',this,()=>setPending('diff','strong'))">Strong</button>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <span class="modal-label">Komi (White Bonus Points)</span>
+      <div class="option-group" id="komiOpts">
+        <button class="opt"          data-val="0.5" onclick="selectOpt('komiOpts',this,()=>setPending('komi',0.5))">0.5</button>
+        <button class="opt opt--sel" data-val="2.5" onclick="selectOpt('komiOpts',this,()=>setPending('komi',2.5))">2.5</button>
+        <button class="opt"          data-val="6.5" onclick="selectOpt('komiOpts',this,()=>setPending('komi',6.5))">6.5</button>
+        <button class="opt"          data-val="7.5" onclick="selectOpt('komiOpts',this,()=>setPending('komi',7.5))">7.5</button>
+      </div>
+      <div class="komi-custom-wrap">
+        <span class="komi-custom-label">Custom:</span>
+        <input class="komi-input" id="komiCustom" type="number" min="0" max="20" step="0.5" value="2.5" oninput="setPendingKomiCustom(this.value)">
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" style="flex:1" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn--primary" style="flex:1" onclick="applySettings()">Apply & New Game</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SGF MODAL ══════════════════════════════════════ -->
+<div class="modal-backdrop" id="sgfModal">
+  <div class="modal">
+    <div class="modal-title">Game Record (SGF)</div>
+
+    <div class="modal-section">
+      <span class="modal-label">Export — Copy or Save</span>
+      <textarea class="sgf-textarea" id="sgfExportText" readonly></textarea>
+    </div>
+
+    <div class="modal-section">
+      <span class="modal-label">Import — Paste SGF to Load</span>
+      <textarea class="sgf-textarea sgf-import-textarea" id="sgfImportText" placeholder="(;FF[4]GM[1]SZ[9]...)"></textarea>
+      <div class="import-error" id="importError">Invalid SGF format.</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" style="flex:1" onclick="closeSGF()">Close</button>
+      <button class="btn" style="flex:1" onclick="importSGF()">Import</button>
+      <button class="btn btn--primary" style="flex:1" onclick="copySGF()">Copy SGF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/**
+ * Stone Garden · Go AI v4
+ *
+ * Architecture:
+ *   GoEngine   — pure game logic (board state, move legality, scoring)
+ *   AI         — Minimax α-β with transposition table and move ordering
+ *   Renderer   — Canvas 2D drawing (board, stones, effects, particles)
+ *   App        — state coordinator, event handling, UI updates
+ *
+ * AI features:
+ *   · Minimax with alpha-beta pruning
+ *   · Zobrist hashing for super-ko detection
+ *   · Transposition table (400k entries, LRU eviction)
+ *   · Move ordering (captures, atari threats, center heuristic)
+ *   · Static evaluation: territory, captures, liberties, center control
+ *
+ * Game features:
+ *   · 5×5, 7×7, 9×9 board sizes
+ *   · Three difficulty levels (Beginner=random, Intermediate, Strong)
+ *   · Full undo/redo with snapshot stack
+ *   · Review mode with frame-by-frame navigation
+ *   · SGF import/export (FF[4])
+ *   · Japanese scoring with configurable komi
+ *   · Territory visualisation overlay
+ *   · Move number overlay
+ *   · Capture particle effects
+ *   · Keyboard shortcut suite
+ */
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 1 · CONSTANTS
+// ─────────────────────────────────────────────────────────────
+
+/** Board cell values */
+const CELL_EMPTY = 0;
+const CELL_BLACK = 1;
+const CELL_WHITE = 2;
+
+/** SGF coordinate alphabet (skips 'i') */
+const SGF_ALPHA = 'abcdefghjklmnopqrst';
+
+/** Display coordinate alphabet (skips 'I') */
+const BOARD_ALPHA = 'ABCDEFGHJKLMNOPQRST';
+
+/** Stone colors as CSS-compatible values for debug/utility */
+const COLOR_NAME = ['', 'black', 'white'];
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 2 · ZOBRIST HASH TABLE
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Pre-computed Zobrist table: ZT[cell][color − 1] = [hi32, lo32]
+ * Using two 32-bit halves per entry to reduce hash collisions.
+ * Table covers the maximum board size (9×9 = 81 cells).
+ */
+const ZT = (() => {
+  const rnd32 = () => (Math.random() * 0xFFFFFFFF) >>> 0;
+  return Array.from({ length: 81 }, () => [
+    [rnd32(), rnd32()],   // BLACK entry
+    [rnd32(), rnd32()],   // WHITE entry
+  ]);
+})();
+
+/** XOR two 64-bit hashes (stored as [hi, lo] pairs) */
+const zXor = (a, b) => [a[0] ^ b[0], a[1] ^ b[1]];
+
+/** Equality test for two 64-bit hashes */
+const zEq = (a, b)  => a[0] === b[0] && a[1] === b[1];
+
+/**
+ * Map a 64-bit hash to a Number key suitable for a JS Map.
+ * Uses a prime multiplier to improve distribution.
+ */
+const zKey = h => h[0] * 4294967311 + h[1];
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 3 · GO ENGINE
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Pure game-logic engine with no rendering dependencies.
+ * All state mutations are explicit — nothing is implicit or global.
+ */
+class GoEngine {
+  /**
+   * @param {number} size  Board dimension (5, 7, or 9)
+   * @param {number} komi  White's komi bonus (Japanese scoring)
+   */
+  constructor(size, komi) {
+    this.size  = size;
+    this.komi  = komi;
+    this.N     = size * size;
+
+    // Board state
+    this.board         = new Uint8Array(this.N);
+    this.currentPlayer = CELL_BLACK;
+    this.capturedBy    = [0, 0, 0];   // indexed by CELL_BLACK/WHITE
+    this.passes        = 0;
+    this.moveCount     = 0;
+    this.gameOver      = false;
+    this.resignedBy    = null;
+
+    // History for undo
+    this._history = [];
+
+    // Super-ko: set of Zobrist hash keys representing seen positions
+    this._hash       = [0, 0];
+    this._posHistory = new Set([zKey(this._hash)]);
+  }
+
+  // ── Coordinate helpers ──────────────────────────────────────
+
+  /** (row, col) → linear index */
+  idx(r, c) { return r * this.size + c; }
+
+  /** Linear index → [row, col] */
+  rc(i)     { return [Math.floor(i / this.size), i % this.size]; }
+
+  _inBounds(r, c) {
+    return r >= 0 && r < this.size && c >= 0 && c < this.size;
+  }
+
+  _neighbors(r, c) {
+    const ns = [];
+    if (r > 0)            ns.push([r - 1, c]);
+    if (r < this.size - 1) ns.push([r + 1, c]);
+    if (c > 0)            ns.push([r, c - 1]);
+    if (c < this.size - 1) ns.push([r, c + 1]);
+    return ns;
+  }
+
+  // ── Group analysis ──────────────────────────────────────────
+
+  /**
+   * Flood-fill to find all stones in a group and their liberties.
+   * @returns {{ stones: [number,number][], liberties: Set<number> }}
+   */
+  _group(board, r, c) {
+    const color = board[this.idx(r, c)];
+    if (!color) return { stones: [], liberties: new Set() };
+
+    const stones    = [];
+    const liberties = new Set();
+    const visited   = new Uint8Array(this.N);
+    const stack     = [this.idx(r, c)];
+
+    while (stack.length) {
+      const k = stack.pop();
+      if (visited[k]) continue;
+      visited[k] = 1;
+      stones.push(this.rc(k));
+      const [rr, cc] = this.rc(k);
+      for (const [nr, nc] of this._neighbors(rr, cc)) {
+        const nk = this.idx(nr, nc);
+        if (board[nk] === CELL_EMPTY) liberties.add(nk);
+        else if (board[nk] === color && !visited[nk]) stack.push(nk);
+      }
+    }
+    return { stones, liberties };
+  }
+
+  // ── Move legality ───────────────────────────────────────────
+
+  /**
+   * Attempt a move without committing it to game state.
+   * Returns null if the move is illegal (occupied, suicide, super-ko).
+   *
+   * @param {number} r      Target row
+   * @param {number} c      Target column
+   * @param {number} color  CELL_BLACK or CELL_WHITE
+   * @returns {{ board: Uint8Array, hash: number[], captured: [number,number][], capturedCount: number } | null}
+   */
+  tryMove(r, c, color) {
+    if (!this._inBounds(r, c)) return null;
+    const k = this.idx(r, c);
+    if (this.board[k] !== CELL_EMPTY) return null;
+
+    const nb      = new Uint8Array(this.board);
+    const opp     = color === CELL_BLACK ? CELL_WHITE : CELL_BLACK;
+    nb[k]         = color;
+    let newHash   = zXor(this._hash, ZT[k][color - 1]);
+    const captured = [];
+
+    // Capture opponent groups with zero liberties after our placement
+    for (const [nr, nc] of this._neighbors(r, c)) {
+      const nk = this.idx(nr, nc);
+      if (nb[nk] !== opp) continue;
+      const g = this._group(nb, nr, nc);
+      if (g.liberties.size === 0) {
+        for (const [gx, gy] of g.stones) {
+          const gi = this.idx(gx, gy);
+          newHash  = zXor(newHash, ZT[gi][opp - 1]);
+          nb[gi]   = CELL_EMPTY;
+          captured.push([gx, gy]);
+        }
+      }
+    }
+
+    // Suicide: legal only if it captured at least one opponent stone
+    if (captured.length === 0 && this._group(nb, r, c).liberties.size === 0) {
+      return null;
+    }
+
+    // Super-ko: reject if resulting position has been seen before
+    if (this._posHistory.has(zKey(newHash))) return null;
+
+    return { board: nb, hash: newHash, captured, capturedCount: captured.length };
+  }
+
+  // ── Move execution ──────────────────────────────────────────
+
+  /**
+   * Execute a stone placement. Saves a snapshot for undo before committing.
+   * @returns {object|null}  The tryMove result, or null if illegal.
+   */
+  makeMove(r, c) {
+    const result = this.tryMove(r, c, this.currentPlayer);
+    if (!result) return null;
+
+    this._saveSnapshot(r, c, false, result.capturedCount);
+
+    this.board    = result.board;
+    this._hash    = result.hash;
+    this._posHistory.add(zKey(this._hash));
+    this.capturedBy[this.currentPlayer] += result.capturedCount;
+    this.passes    = 0;
+    this.moveCount++;
+    this.currentPlayer = this.currentPlayer === CELL_BLACK ? CELL_WHITE : CELL_BLACK;
+
+    return result;
+  }
+
+  /** Pass the current player's turn. Two consecutive passes ends the game. */
+  pass() {
+    this._saveSnapshot(-1, -1, true, 0);
+    this.passes++;
+    this.moveCount++;
+    this.currentPlayer = this.currentPlayer === CELL_BLACK ? CELL_WHITE : CELL_BLACK;
+    if (this.passes >= 2) this.gameOver = true;
+    return { gameOver: this.gameOver };
+  }
+
+  /** Resign. Immediately ends the game in favour of the opponent. */
+  resign(color) {
+    this.gameOver  = true;
+    this.resignedBy = color;
+  }
+
+  // ── Snapshot system (undo) ──────────────────────────────────
+
+  _saveSnapshot(r, c, isPass, capturedCount) {
+    this._history.push({
+      board:         new Uint8Array(this.board),
+      hash:          [...this._hash],
+      posHistory:    new Set(this._posHistory),
+      capturedBy:    [...this.capturedBy],
+      passes:        this.passes,
+      currentPlayer: this.currentPlayer,
+      moveCount:     this.moveCount,
+      move:          isPass ? null : [r, c],
+      capturedCount,
+    });
+  }
+
+  /**
+   * Undo the last half-move (one stone placement or pass).
+   * @returns {boolean} Whether undo was possible.
+   */
+  undo() {
+    if (!this._history.length) return false;
+    const snap = this._history.pop();
+    this.board         = snap.board;
+    this._hash         = snap.hash;
+    this._posHistory   = snap.posHistory;
+    this.capturedBy    = snap.capturedBy;
+    this.passes        = snap.passes;
+    this.currentPlayer = snap.currentPlayer;
+    this.moveCount     = snap.moveCount;
+    this.gameOver      = false;
+    this.resignedBy    = null;
+    return true;
+  }
+
+  canUndo() { return this._history.length > 0; }
+
+  // ── Board state queries ─────────────────────────────────────
+
+  isBoardFull() {
+    for (let i = 0; i < this.N; i++) {
+      if (this.board[i] === CELL_EMPTY) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Generate all legal moves for the given colour.
+   * @param {number} color
+   * @returns {[number,number][]}  Array of [row, col] pairs.
+   */
+  getValidMoves(color) {
+    const moves = [];
+    for (let r = 0; r < this.size; r++) {
+      for (let c = 0; c < this.size; c++) {
+        if (this.tryMove(r, c, color)) moves.push([r, c]);
+      }
+    }
+    return moves;
+  }
+
+  // ── Scoring ─────────────────────────────────────────────────
+
+  /**
+   * Flood-fill territory computation for Japanese scoring.
+   * Empty regions surrounded exclusively by one colour are assigned to that colour.
+   * @returns {Int8Array}  Per-cell territory owner (CELL_BLACK, CELL_WHITE, or 0).
+   */
+  getTerritoryMap() {
+    const map     = new Int8Array(this.N);
+    const visited = new Uint8Array(this.N);
+
+    for (let start = 0; start < this.N; start++) {
+      if (this.board[start] !== CELL_EMPTY || visited[start]) continue;
+
+      const region = [];
+      const queue  = [start];
+      let hasBlack = false;
+      let hasWhite = false;
+
+      while (queue.length) {
+        const k = queue.shift();
+        if (visited[k]) continue;
+        visited[k] = 1;
+
+        if (this.board[k] === CELL_EMPTY) {
+          region.push(k);
+          const [rx, ry] = this.rc(k);
+          for (const [nx, ny] of this._neighbors(rx, ry)) {
+            if (!visited[this.idx(nx, ny)]) queue.push(this.idx(nx, ny));
+          }
+        } else if (this.board[k] === CELL_BLACK) {
+          hasBlack = true;
+        } else {
+          hasWhite = true;
+        }
+      }
+
+      const owner = (hasBlack && !hasWhite) ? CELL_BLACK
+                  : (!hasBlack && hasWhite) ? CELL_WHITE
+                  : 0;
+      for (const k of region) map[k] = owner;
+    }
+
+    return map;
+  }
+
+  /**
+   * Compute final Japanese score for both players.
+   * Score = territory points + opponent stones captured
+   */
+  getScore() {
+    const tm = this.getTerritoryMap();
+    let blackTerritory = 0;
+    let whiteTerritory = 0;
+
+    for (let i = 0; i < this.N; i++) {
+      if (tm[i] === CELL_BLACK) blackTerritory++;
+      else if (tm[i] === CELL_WHITE) whiteTerritory++;
+    }
+
+    return {
+      blackTerritory,
+      whiteTerritory,
+      blackCaptures: this.capturedBy[CELL_BLACK],
+      whiteCaptures: this.capturedBy[CELL_WHITE],
+      black: blackTerritory + this.capturedBy[CELL_BLACK],
+      white: whiteTerritory + this.capturedBy[CELL_WHITE] + this.komi,
+    };
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 4 · TRANSPOSITION TABLE
+// ─────────────────────────────────────────────────────────────
+
+const TT = new Map();
+const TT_MAX_SIZE = 400_000;
+
+function ttClear() { TT.clear(); }
+
+/**
+ * Lookup a position in the transposition table.
+ * Applies standard alpha/beta window adjustments for lower/upper bounds.
+ *
+ * @param {number[]} hash   Current Zobrist hash
+ * @param {number}   depth  Remaining search depth
+ * @param {number}   alpha
+ * @param {number}   beta
+ * @returns {number|null}   Cached evaluation, or null on miss.
+ */
+function ttGet(hash, depth, alpha, beta) {
+  const entry = TT.get(zKey(hash));
+  if (!entry || entry.depth < depth) return null;
+
+  if (entry.flag === 'E') return entry.val;                   // exact
+  if (entry.flag === 'L' && entry.val >= beta)  return entry.val;  // lower bound
+  if (entry.flag === 'U' && entry.val <= alpha) return entry.val;  // upper bound
+  return null;
+}
+
+/**
+ * Store a search result in the transposition table.
+ * Evicts the entire table when it exceeds TT_MAX_SIZE.
+ *
+ * @param {number[]} hash   Current Zobrist hash
+ * @param {number}   depth  Remaining depth at storage time
+ * @param {number}   val    Evaluation value
+ * @param {'E'|'L'|'U'} flag  Exact / Lower-bound / Upper-bound
+ */
+function ttPut(hash, depth, val, flag) {
+  if (TT.size >= TT_MAX_SIZE) TT.clear();
+  TT.set(zKey(hash), { depth, val, flag });
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 5 · STATIC EVALUATION
+// ─────────────────────────────────────────────────────────────
+
+// Evaluation weights (tuned empirically for 5-9 board play)
+const EVAL_TERRITORY_WEIGHT = 2.8;
+const EVAL_CAPTURE_WEIGHT   = 2.2;
+const EVAL_ATARI_PENALTY    = -6.5;
+const EVAL_TWO_LIB_PENALTY  = -1.2;
+const EVAL_STONE_BONUS      = 0.14;
+const EVAL_LIBERTY_BONUS    = 0.28;
+const EVAL_CENTER_BONUS     = 0.07;
+
+/**
+ * Heuristic board evaluation from Black's perspective (+ve = Black winning).
+ * Factors: territory, captures, liberty pressure, atari detection, center control.
+ *
+ * @param {Uint8Array} board
+ * @param {number}     size
+ * @param {number[]}   capturedBy  Indexed [0, blackCaps, whiteCaps]
+ * @param {number}     komi
+ * @returns {number}
+ */
+function evalBoard(board, size, capturedBy, komi) {
+  const N    = size * size;
+  const cx   = (size / 2) | 0;
+  let value  = 0;
+
+  // ── Territory (flood fill) ───────────────────────────────
+  const visited = new Uint8Array(N);
+  const nbrs4   = k => {
+    const r = (k / size) | 0, c = k % size;
+    const out = [];
+    if (r > 0)       out.push(k - size);
+    if (r < size - 1) out.push(k + size);
+    if (c > 0)       out.push(k - 1);
+    if (c < size - 1) out.push(k + 1);
+    return out;
+  };
+
+  for (let s = 0; s < N; s++) {
+    if (board[s] !== CELL_EMPTY || visited[s]) continue;
+    const region = [];
+    const queue  = [s];
+    let hasB = false, hasW = false;
+
+    while (queue.length) {
+      const k = queue.shift();
+      if (visited[k]) continue;
+      visited[k] = 1;
+      if (board[k] === CELL_EMPTY) {
+        region.push(k);
+        for (const nk of nbrs4(k)) if (!visited[nk]) queue.push(nk);
+      } else if (board[k] === CELL_BLACK) hasB = true;
+      else hasW = true;
+    }
+
+    const sign = (hasB && !hasW) ? 1 : (!hasB && hasW) ? -1 : 0;
+    value += sign * region.length * EVAL_TERRITORY_WEIGHT;
+  }
+
+  // ── Captures ─────────────────────────────────────────────
+  value += (capturedBy[CELL_BLACK] - capturedBy[CELL_WHITE]) * EVAL_CAPTURE_WEIGHT;
+  value -= komi;
+
+  // ── Liberty pressure & atari ──────────────────────────────
+  const processed = new Uint8Array(N);
+  for (let k = 0; k < N; k++) {
+    const color = board[k];
+    if (!color || processed[k]) continue;
+
+    const stones    = [];
+    const libSet    = new Set();
+    const vis2      = new Uint8Array(N);
+    const stk       = [k];
+
+    while (stk.length) {
+      const kk = stk.pop();
+      if (vis2[kk]) continue;
+      vis2[kk] = processed[kk] = 1;
+      stones.push(kk);
+      for (const nk of nbrs4(kk)) {
+        if (board[nk] === CELL_EMPTY)        libSet.add(nk);
+        else if (board[nk] === color && !vis2[nk]) stk.push(nk);
+      }
+    }
+
+    const sign = color === CELL_BLACK ? 1 : -1;
+    const libs = libSet.size;
+    if      (libs === 1) value += sign * EVAL_ATARI_PENALTY;
+    else if (libs === 2) value += sign * EVAL_TWO_LIB_PENALTY;
+    else                 value += sign * Math.min(libs, 6) * EVAL_LIBERTY_BONUS;
+    value += sign * stones.length * EVAL_STONE_BONUS;
+  }
+
+  // ── Center control ────────────────────────────────────────
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const color = board[r * size + c];
+      if (!color) continue;
+      const dist = Math.abs(r - cx) + Math.abs(c - cx);
+      value += (color === CELL_BLACK ? 1 : -1) * (size - dist) * EVAL_CENTER_BONUS;
+    }
+  }
+
+  return value;
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 6 · MOVE ORDERING
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Generate and score candidate moves for efficient α-β pruning.
+ * Higher-priority moves are searched first, improving cut-off rates.
+ *
+ * Priority factors (highest first):
+ *   1. Captures opponent stones
+ *   2. Saves own groups in atari (1 liberty remaining)
+ *   3. Attacks opponent groups in atari/near-atari
+ *   4. Center proximity
+ *
+ * @param {GoEngine} engine
+ * @param {number}   color
+ * @param {number}   [beam]  Max candidates to return (beam search width)
+ * @returns {{ r: number, c: number, score: number }[]}
+ */
+function orderedMoves(engine, color, beam) {
+  const { size, board } = engine;
+  const opp = color === CELL_BLACK ? CELL_WHITE : CELL_BLACK;
+  const cx  = (size / 2) | 0;
+  const moves = [];
+
+  const defaultBeam = size <= 5 ? 18 : size <= 7 ? 15 : 13;
+  const limit = beam ?? defaultBeam;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const result = engine.tryMove(r, c, color);
+      if (!result) continue;
+
+      let score = 0;
+
+      // Capture bonus
+      if (result.capturedCount > 0) {
+        score += 25 + result.capturedCount * 10;
+      }
+
+      // Tactical analysis of adjacent groups
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue;
+
+        const nk    = engine.idx(nr, nc);
+        const ncell = board[nk];
+
+        if (ncell === color) {
+          const g = engine._group(board, nr, nc);
+          if      (g.liberties.size === 1) score += 15;  // save own group from capture
+          else if (g.liberties.size === 2) score +=  4;
+        } else if (ncell === opp) {
+          const g = engine._group(board, nr, nc);
+          if (g.liberties.size <= 2) score += 8;          // put opponent in atari
+        }
+      }
+
+      // Center proximity heuristic
+      score += (size - (Math.abs(r - cx) + Math.abs(c - cx))) * 0.65;
+
+      moves.push({ r, c, score });
+    }
+  }
+
+  moves.sort((a, b) => b.score - a.score);
+  return moves.slice(0, limit);
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 7 · MINIMAX α-β SEARCH
+// ─────────────────────────────────────────────────────────────
+
+// Declared on the App global object but referenced here
+let _nodesExplored = 0;
+
+/**
+ * Minimax with alpha-beta pruning and transposition table lookup.
+ * Positive values favour Black; negative values favour White.
+ *
+ * @param {GoEngine} engine  Game state (mutated in-place, then restored)
+ * @param {number}   depth   Remaining search depth
+ * @param {number}   alpha   Lower bound for maximiser
+ * @param {number}   beta    Upper bound for minimiser
+ * @param {boolean}  isMax   True if current node is the maximising player (Black)
+ * @returns {number}         Evaluation from Black's perspective
+ */
+function minimax(engine, depth, alpha, beta, isMax) {
+  _nodesExplored++;
+
+  const hit = ttGet(engine._hash, depth, alpha, beta);
+  if (hit !== null) return hit;
+
+  if (depth === 0) {
+    const v = evalBoard(engine.board, engine.size, engine.capturedBy, engine.komi);
+    ttPut(engine._hash, 0, v, 'E');
+    return v;
+  }
+
+  const color = isMax ? CELL_BLACK : CELL_WHITE;
+  const moves = orderedMoves(engine, color);
+
+  // No legal moves — simulate a pass within the search tree
+  if (!moves.length) {
+    if (engine.passes >= 1) {
+      // Both sides passed; terminal node
+      const s = engine.getScore();
+      return s.black - s.white;
+    }
+    const savedPasses = engine.passes;
+    const savedPlayer = engine.currentPlayer;
+    engine.passes++;
+    engine.currentPlayer = color === CELL_BLACK ? CELL_WHITE : CELL_BLACK;
+    const v = minimax(engine, depth - 1, alpha, beta, !isMax);
+    engine.passes        = savedPasses;
+    engine.currentPlayer = savedPlayer;
+    return v;
+  }
+
+  const origAlpha = alpha;
+  let best = isMax ? -Infinity : Infinity;
+
+  for (const { r, c } of moves) {
+    const result = engine.tryMove(r, c, color);
+    if (!result) continue;
+
+    // Save state
+    const prevBoard  = engine.board;
+    const prevHash   = engine._hash;
+    const prevCaps   = engine.capturedBy;
+    const prevPasses = engine.passes;
+    const prevPlayer = engine.currentPlayer;
+
+    // Apply move
+    engine.board       = result.board;
+    engine._hash       = result.hash;
+    engine.capturedBy  = [...prevCaps];
+    engine.capturedBy[color] += result.capturedCount;
+    engine._posHistory.add(zKey(result.hash));
+    engine.passes      = 0;
+    engine.currentPlayer = color === CELL_BLACK ? CELL_WHITE : CELL_BLACK;
+
+    const v = minimax(engine, depth - 1, alpha, beta, !isMax);
+
+    // Restore state
+    engine._posHistory.delete(zKey(result.hash));
+    engine.board       = prevBoard;
+    engine._hash       = prevHash;
+    engine.capturedBy  = prevCaps;
+    engine.passes      = prevPasses;
+    engine.currentPlayer = prevPlayer;
+
+    if (isMax) {
+      if (v > best) best = v;
+      if (v > alpha) alpha = v;
+    } else {
+      if (v < best) best = v;
+      if (v < beta)  beta  = v;
+    }
+    if (beta <= alpha) break;  // α-β cut-off
+  }
+
+  const flag = best <= origAlpha ? 'U' : best >= beta ? 'L' : 'E';
+  ttPut(engine._hash, depth, best, flag);
+  return best;
+}
+
+/**
+ * Map difficulty + board size to a search depth (in ply).
+ * Depths are capped to keep response times sub-second on modern hardware.
+ */
+function getSearchDepth(difficulty, boardSize) {
+  switch (difficulty) {
+    case 'beginner':     return 0;                                                // random play
+    case 'intermediate': return boardSize <= 5 ? 3 : boardSize <= 7 ? 3 : 2;
+    case 'strong':       return boardSize <= 5 ? 6 : boardSize <= 7 ? 5 : 4;
+    default:             return 2;
+  }
+}
+
+/**
+ * Top-level AI call. Returns the best move for White, or null to pass.
+ * Updates UI performance counters (nodes/s, depth).
+ *
+ * @param {GoEngine} engine
+ * @param {string}   difficulty  'beginner' | 'intermediate' | 'strong'
+ * @returns {{ r: number, c: number } | null}
+ */
+function computeAIMove(engine, difficulty) {
+  // Beginner: random legal move
+  if (difficulty === 'beginner') {
+    const moves = engine.getValidMoves(CELL_WHITE);
+    if (!moves.length) return null;
+    return { r: moves[0][0], c: moves[0][1] };
+  }
+
+  const depth      = getSearchDepth(difficulty, engine.size);
+  const candidates = orderedMoves(engine, CELL_WHITE, Infinity);
+  if (!candidates.length) return null;
+
+  _nodesExplored = 0;
+  ttClear();
+
+  const t0         = performance.now();
+  let bestValue    = Infinity;
+  let bestMove     = null;
+
+  // White minimises the evaluation function
+  for (const { r, c } of candidates) {
+    const result = engine.tryMove(r, c, CELL_WHITE);
+    if (!result) continue;
+
+    const prevBoard  = engine.board;
+    const prevHash   = engine._hash;
+    const prevCaps   = engine.capturedBy;
+    const prevPasses = engine.passes;
+    const prevPlayer = engine.currentPlayer;
+
+    engine.board      = result.board;
+    engine._hash      = result.hash;
+    engine.capturedBy = [...prevCaps];
+    engine.capturedBy[CELL_WHITE] += result.capturedCount;
+    engine._posHistory.add(zKey(result.hash));
+    engine.passes     = 0;
+    engine.currentPlayer = CELL_BLACK;
+
+    const v = minimax(engine, depth - 1, -Infinity, Infinity, true);
+
+    engine._posHistory.delete(zKey(result.hash));
+    engine.board      = prevBoard;
+    engine._hash      = prevHash;
+    engine.capturedBy = prevCaps;
+    engine.passes     = prevPasses;
+    engine.currentPlayer = prevPlayer;
+
+    if (v < bestValue) {
+      bestValue = v;
+      bestMove  = { r, c };
+    }
+  }
+
+  // Update performance stats
+  const elapsed = performance.now() - t0;
+  const nps     = elapsed > 0 ? Math.round(_nodesExplored / (elapsed / 1000)) : _nodesExplored;
+  const npsStr  = nps > 999_999 ? (nps / 1e6).toFixed(1) + 'M'
+                : nps > 999     ? (nps / 1e3).toFixed(1) + 'k'
+                : String(nps);
+  el('nodesDisplay').textContent = npsStr;
+  el('depthDisplay').textContent = depth + ' ply';
+
+  return bestMove;
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 8 · APPLICATION STATE
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Central application state.
+ * All mutable game/UI state lives here; nothing else is global.
+ */
+const App = {
+  // Settings (applied on new game)
+  settings: { size: 5, diff: 'intermediate', komi: 2.5 },
+  pending:  { size: 5, diff: 'intermediate', komi: 2.5 },
+
+  // Core
+  engine: /** @type {GoEngine} */ (null),
+  canvas: /** @type {HTMLCanvasElement} */ (null),
+  ctx:    /** @type {CanvasRenderingContext2D} */ (null),
+
+  // Canvas geometry
+  SZ:   320,   // total canvas pixel size
+  PAD:   40,   // padding from edge to first grid line
+  CELL:   0,   // pixels per grid cell
+  SR:     0,   // stone radius in pixels
+  DPR:    1,   // device pixel ratio
+
+  // Game log & redo
+  moveLog:   [],   // [{ color, r, c, pass, resign, captured, coord }]
+  redoStack: [],   // complete state snapshots for redo
+
+  // UI state flags
+  hintPos:   null,   // { r, c } for the current hint marker
+  showTerr:  false,
+  showNums:  false,
+  animating: false,
+  hoverPos:  null,
+  aiTimer:   null,
+  rafId:     null,
+
+  // Review mode
+  reviewMode:      false,
+  reviewIdx:       0,
+  reviewSnapshots: [],  // [{ board, capturedBy }]
+
+  // Particle system
+  particles: [],  // [{ x, y, vx, vy, gravity, color, t0, dur }]
+};
+
+/** Convenience: get element by id */
+const el = id => document.getElementById(id);
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 9 · CANVAS INITIALISATION
+// ─────────────────────────────────────────────────────────────
+
+function initCanvas(size) {
+  const canvas = el('board');
+  App.canvas   = canvas;
+  App.ctx      = canvas.getContext('2d');
+  App.DPR      = Math.min(window.devicePixelRatio || 1, 2);
+
+  const PAD   = size <= 5 ? 44 : size <= 7 ? 44 : 48;
+  const TOTAL = size <= 5 ? 326 : size <= 7 ? 404 : 478;
+  const CELL  = (TOTAL - PAD * 2) / (size - 1);
+  const SR    = Math.floor(CELL * 0.455);
+
+  App.SZ   = TOTAL;
+  App.PAD  = PAD;
+  App.CELL = CELL;
+  App.SR   = SR;
+
+  canvas.width  = TOTAL * App.DPR;
+  canvas.height = TOTAL * App.DPR;
+  canvas.style.width  = TOTAL + 'px';
+  canvas.style.height = TOTAL + 'px';
+  App.ctx.scale(App.DPR, App.DPR);
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 10 · COORDINATE HELPERS
+// ─────────────────────────────────────────────────────────────
+
+/** Grid [row, col] → canvas pixel {x, y} (centre of intersection) */
+function gridToXY(r, c) {
+  return {
+    x: App.PAD + c * App.CELL,
+    y: App.PAD + r * App.CELL,
+  };
+}
+
+/** Canvas pixel → nearest grid intersection, or null if out of range/tolerance */
+function xyToGrid(px, py) {
+  const size = App.engine.size;
+  const c    = Math.round((px - App.PAD) / App.CELL);
+  const r    = Math.round((py - App.PAD) / App.CELL);
+  if (r < 0 || r >= size || c < 0 || c >= size) return null;
+
+  const snap = gridToXY(r, c);
+  const dist = Math.hypot(px - snap.x, py - snap.y);
+  return dist <= App.CELL * 0.52 ? { r, c } : null;
+}
+
+/** SGF [row, col] → display coordinate string e.g. "D4" */
+function coordStr(r, c) {
+  return BOARD_ALPHA[c] + (App.engine.size - r);
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 11 · RENDERER
+// ─────────────────────────────────────────────────────────────
+
+// ── Low-level drawing utilities ──────────────────────────────
+
+/** Draw a rounded rectangle path on the current context */
+function rrPath(x, y, w, h, r) {
+  const ctx = App.ctx;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h); ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+// ── Board drawing ────────────────────────────────────────────
+
+function drawBoard() {
+  const ctx  = App.ctx;
+  const sz   = App.SZ;
+  const size = App.engine.size;
+
+  // Wood gradient background
+  const grad = ctx.createLinearGradient(0, 0, sz, sz);
+  grad.addColorStop(0,    '#D09538');
+  grad.addColorStop(0.46, '#C28C32');
+  grad.addColorStop(1,    '#B6822C');
+  ctx.fillStyle = grad;
+  rrPath(0, 0, sz, sz, 6);
+  ctx.fill();
+
+  // Subtle diagonal grain lines
+  ctx.save();
+  ctx.globalAlpha = 0.018;
+  ctx.strokeStyle = '#3A1A04';
+  ctx.lineWidth = 0.8;
+  for (let i = -sz; i < sz * 2; i += 10) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0);
+    ctx.lineTo(i + sz * 0.7, sz);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Vignette darkening around edges
+  ctx.save();
+  const vig = ctx.createRadialGradient(sz / 2, sz / 2, sz * 0.25, sz / 2, sz / 2, sz * 0.76);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.1)');
+  ctx.fillStyle = vig;
+  rrPath(0, 0, sz, sz, 6);
+  ctx.fill();
+  ctx.restore();
+
+  // Grid lines — outer border slightly heavier
+  for (let i = 0; i < size; i++) {
+    const isEdge = (i === 0 || i === size - 1);
+    ctx.strokeStyle = '#5A2E0A';
+    ctx.lineWidth   = isEdge ? 1.4 : 0.8;
+
+    // Horizontal
+    const { x: x0, y: y0 } = gridToXY(i, 0);
+    const { x: x1 }        = gridToXY(i, size - 1);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.stroke();
+
+    // Vertical
+    const { x: xa, y: ya } = gridToXY(0, i);
+    const { y: yb }        = gridToXY(size - 1, i);
+    ctx.beginPath(); ctx.moveTo(xa, ya); ctx.lineTo(xa, yb); ctx.stroke();
+  }
+
+  // Star points (hoshi)
+  const STAR_POSITIONS = {
+    5: [[2, 2], [1, 1], [1, 3], [3, 1], [3, 3]],
+    7: [[3, 3], [2, 2], [2, 4], [4, 2], [4, 4]],
+    9: [[4, 4], [2, 2], [2, 6], [6, 2], [6, 6], [2, 4], [4, 2], [6, 4], [4, 6]],
+  };
+  const stars = STAR_POSITIONS[size] ?? [];
+  ctx.fillStyle = '#4A2408';
+  const mx = (size / 2) | 0;
+  for (const [r, c] of stars) {
+    const { x, y } = gridToXY(r, c);
+    const isCenter = r === mx && c === mx;
+    ctx.beginPath();
+    ctx.arc(x, y, isCenter ? 5 : 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Coordinate labels
+  ctx.font = `bold 9px 'JetBrains Mono', monospace`;
+  ctx.fillStyle   = 'rgba(74,44,14,.7)';
+  ctx.textAlign   = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < size; i++) {
+    const { x } = gridToXY(0, i); ctx.fillText(BOARD_ALPHA[i], x, App.PAD / 2 - 1);
+    const { y } = gridToXY(i, 0); ctx.fillText(size - i, App.PAD / 2 - 10, y);
+  }
+
+  // Outer border frame highlight
+  ctx.strokeStyle = 'rgba(255,210,100,.12)';
+  ctx.lineWidth   = 1.5;
+  rrPath(1, 1, sz - 2, sz - 2, 6);
+  ctx.stroke();
+
+  // Review mode tint
+  if (App.reviewMode) {
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.fillStyle   = '#9B7EDE';
+    rrPath(0, 0, sz, sz, 6);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ── Stone drawing ────────────────────────────────────────────
+
+/**
+ * Draw a single stone at canvas position (x, y).
+ *
+ * @param {number} x      Canvas X position
+ * @param {number} y      Canvas Y position
+ * @param {number} color  CELL_BLACK or CELL_WHITE
+ * @param {number} rad    Stone radius
+ * @param {number} [alpha]  Global opacity (0–1)
+ */
+function drawStone(x, y, color, rad, alpha = 1) {
+  const ctx = App.ctx;
+  ctx.save();
+  if (alpha < 1) ctx.globalAlpha = alpha;
+
+  ctx.beginPath();
+  ctx.arc(x, y, rad, 0, Math.PI * 2);
+
+  if (color === CELL_BLACK) {
+    const g = ctx.createRadialGradient(
+      x - rad * 0.32, y - rad * 0.36, rad * 0.04,
+      x + rad * 0.10, y + rad * 0.12, rad * 1.15
+    );
+    g.addColorStop(0,    '#5A5450');
+    g.addColorStop(0.5,  '#1C1714');
+    g.addColorStop(1,    '#080604');
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    // Drop shadow
+    ctx.save();
+    ctx.shadowColor  = 'rgba(0,0,0,.55)';
+    ctx.shadowBlur   = 6;
+    ctx.shadowOffsetY = 2;
+    ctx.fill();
+    ctx.restore();
+
+    // Specular highlight
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.22;
+    ctx.beginPath();
+    ctx.arc(x - rad * 0.28, y - rad * 0.32, rad * 0.22, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.restore();
+
+  } else {
+    // Drop shadow
+    ctx.save();
+    ctx.shadowColor   = 'rgba(0,0,0,.4)';
+    ctx.shadowBlur    = 5;
+    ctx.shadowOffsetY = 2;
+
+    const g = ctx.createRadialGradient(
+      x - rad * 0.26, y - rad * 0.30, rad * 0.02,
+      x + rad * 0.06, y + rad * 0.08, rad * 1.18
+    );
+    g.addColorStop(0,    '#FFFFFF');
+    g.addColorStop(0.35, '#F4EDE0');
+    g.addColorStop(0.72, '#DDD5C2');
+    g.addColorStop(1,    '#BFBA9E');
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(90,55,18,.26)';
+    ctx.lineWidth   = 0.8;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+// ── Scene composition ────────────────────────────────────────
+
+function drawStones() {
+  const { engine, moveLog, showNums, reviewMode, reviewIdx, SR } = App;
+  const logLen = reviewMode ? reviewIdx : moveLog.length;
+
+  for (let r = 0; r < engine.size; r++) {
+    for (let c = 0; c < engine.size; c++) {
+      const color = engine.board[engine.idx(r, c)];
+      if (!color) continue;
+
+      const { x, y } = gridToXY(r, c);
+      drawStone(x, y, color, SR);
+
+      if (showNums) {
+        // Find the move number that placed this stone
+        let moveNumber = null;
+        for (let i = 0; i < logLen; i++) {
+          const m = moveLog[i];
+          if (!m.pass && !m.resign && m.r === r && m.c === c) {
+            moveNumber = i + 1;
+            break;
+          }
+        }
+        if (moveNumber !== null) {
+          App.ctx.fillStyle = color === CELL_BLACK
+            ? 'rgba(255,255,255,.75)'
+            : 'rgba(10,8,6,.55)';
+          App.ctx.font          = `${SR > 18 ? 10 : 8}px 'JetBrains Mono', monospace`;
+          App.ctx.textAlign     = 'center';
+          App.ctx.textBaseline  = 'middle';
+          App.ctx.fillText(moveNumber, x, y);
+        }
+      }
+    }
+  }
+}
+
+function drawLastMoveMark() {
+  const { moveLog, reviewMode, reviewIdx } = App;
+  const logLen = reviewMode ? reviewIdx : moveLog.length;
+  if (!logLen) return;
+
+  const last = moveLog[logLen - 1];
+  if (!last || last.pass || last.resign) return;
+
+  const { x, y } = gridToXY(last.r, last.c);
+  App.ctx.beginPath();
+  App.ctx.arc(x, y, App.SR * 0.28, 0, Math.PI * 2);
+  App.ctx.fillStyle = last.color === CELL_BLACK
+    ? 'rgba(255,255,255,.85)'
+    : 'rgba(10,8,6,.52)';
+  App.ctx.fill();
+}
+
+function drawTerritory() {
+  const tm = App.engine.getTerritoryMap();
+
+  for (let r = 0; r < App.engine.size; r++) {
+    for (let c = 0; c < App.engine.size; c++) {
+      const k = App.engine.idx(r, c);
+      if (App.engine.board[k] !== CELL_EMPTY || tm[k] === 0) continue;
+
+      const { x, y } = gridToXY(r, c);
+
+      // Area tint
+      App.ctx.fillStyle = tm[k] === CELL_BLACK
+        ? 'rgba(240,232,216,.18)'
+        : 'rgba(200,146,58,.25)';
+      rrPath(x - 13, y - 13, 26, 26, 4);
+      App.ctx.fill();
+
+      // Centre marker square
+      App.ctx.fillStyle = tm[k] === CELL_BLACK
+        ? 'rgba(240,232,216,.55)'
+        : 'rgba(200,146,58,.65)';
+      rrPath(x - 4, y - 4, 8, 8, 1);
+      App.ctx.fill();
+    }
+  }
+}
+
+function drawHover() {
+  const { hoverPos, animating, engine, reviewMode } = App;
+  if (!hoverPos || animating || engine.gameOver || reviewMode) return;
+  if (engine.currentPlayer !== CELL_BLACK) return;
+  if (!engine.tryMove(hoverPos.r, hoverPos.c, CELL_BLACK)) return;
+
+  const { x, y } = gridToXY(hoverPos.r, hoverPos.c);
+  drawStone(x, y, CELL_BLACK, App.SR * 0.87, 0.24);
+}
+
+function drawHint() {
+  if (!App.hintPos) return;
+  const { r, c } = App.hintPos;
+  const { x, y }  = gridToXY(r, c);
+  const t          = (Date.now() % 1600) / 1600;
+  const pulse      = 0.5 + 0.5 * Math.sin(t * Math.PI * 2);
+
+  App.ctx.save();
+  App.ctx.strokeStyle = '#4CAF80';
+  App.ctx.lineWidth   = 2.5;
+  App.ctx.globalAlpha = pulse * 0.9;
+  App.ctx.beginPath();
+  App.ctx.arc(x, y, App.SR + 5.5, 0, Math.PI * 2);
+  App.ctx.stroke();
+
+  App.ctx.lineWidth   = 1.5;
+  App.ctx.globalAlpha = pulse * 0.5;
+  App.ctx.beginPath();
+  App.ctx.arc(x, y, App.SR - 3.5, 0, Math.PI * 2);
+  App.ctx.stroke();
+  App.ctx.restore();
+}
+
+function drawParticles() {
+  const now = performance.now();
+  App.particles = App.particles.filter(p => now - p.t0 < p.dur);
+
+  for (const p of App.particles) {
+    const t  = (now - p.t0) / p.dur;
+    const px = p.x + p.vx * t;
+    const py = p.y + p.vy * t + p.gravity * t * t;
+    App.ctx.save();
+    App.ctx.globalAlpha = Math.max(0, (1 - t * t) * 0.88);
+    drawStone(px, py, p.color, App.SR * Math.max(0.08, 1 - t * 0.72));
+    App.ctx.restore();
+  }
+}
+
+// ── Main render loop ─────────────────────────────────────────
+
+function render() {
+  App.ctx.clearRect(0, 0, App.SZ, App.SZ);
+
+  drawBoard();
+  if (App.showTerr)  drawTerritory();
+  if (!App.animating) drawHover();
+  drawStones();
+  if (!App.showNums)  drawLastMoveMark();
+  if (App.hintPos)    drawHint();
+  if (App.particles.length) drawParticles();
+
+  // Continue the animation loop only when needed
+  const needsLoop = App.hintPos || App.particles.length;
+  App.rafId = needsLoop ? requestAnimationFrame(render) : null;
+}
+
+function scheduleRender() {
+  if (!App.rafId) App.rafId = requestAnimationFrame(render);
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 12 · ANIMATION HELPERS
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Animate stone placement: scale from 0 → 1.12 → 1 over `dur` ms.
+ *
+ * @param {number}   r, c   Grid position
+ * @param {number}   color
+ * @param {Function} done   Callback when animation completes
+ */
+function animPlace(r, c, color, done) {
+  App.animating = true;
+  const { x, y } = gridToXY(r, c);
+  const t0 = performance.now();
+  const dur = 200;
+
+  (function frame(now) {
+    const t     = Math.min(1, (now - t0) / dur);
+    const scale = t < 0.55
+      ? (t / 0.55) * 1.12
+      : 1.12 - ((t - 0.55) / 0.45) * 0.12;
+
+    render();
+    App.ctx.save();
+    App.ctx.translate(x, y);
+    App.ctx.scale(scale, scale);
+    App.ctx.translate(-x, -y);
+    drawStone(x, y, color, App.SR);
+    App.ctx.restore();
+
+    if (t < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      App.animating = false;
+      done?.();
+    }
+  })(t0);
+}
+
+/**
+ * Spawn capture burst particles for a list of captured positions.
+ * Each particle gets a random outward velocity plus gravity.
+ *
+ * @param {[number,number][]} positions  Captured stone grid positions
+ * @param {number}            color      Color of the captured stones
+ * @param {Function}          done       Callback after burst settles
+ */
+function spawnCaptures(positions, color, done) {
+  for (const [r, c] of positions) {
+    const { x, y } = gridToXY(r, c);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 16 + Math.random() * 28;
+    App.particles.push({
+      x, y,
+      vx:      Math.cos(angle) * speed,
+      vy:      Math.sin(angle) * speed - 14,
+      gravity: 38,
+      color,
+      t0:  performance.now(),
+      dur: 400 + Math.random() * 100,
+    });
+  }
+  scheduleRender();
+  setTimeout(done, 460);
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 13 · REVIEW MODE
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Build an array of board snapshots by replaying the move log from scratch.
+ * Snapshot[0] is the initial empty board; Snapshot[n] is after move n.
+ *
+ * @returns {{ board: Uint8Array, capturedBy: number[] }[]}
+ */
+function buildReviewSnapshots() {
+  const engine = new GoEngine(App.settings.size, App.settings.komi);
+  const snaps  = [{ board: new Uint8Array(engine.board), capturedBy: [0, 0, 0] }];
+
+  for (const m of App.moveLog) {
+    if (m.resign) {
+      snaps.push({ ...snaps[snaps.length - 1] });
+    } else if (m.pass) {
+      engine.pass();
+      snaps.push({ board: new Uint8Array(engine.board), capturedBy: [...engine.capturedBy] });
+    } else {
+      engine.makeMove(m.r, m.c);
+      snaps.push({ board: new Uint8Array(engine.board), capturedBy: [...engine.capturedBy] });
+    }
+  }
+  return snaps;
+}
+
+function applyReviewSnapshot(idx) {
+  const snap = App.reviewSnapshots[idx];
+  if (!snap) return;
+  App.engine.board      = new Uint8Array(snap.board);
+  App.engine.capturedBy = [...snap.capturedBy];
+}
+
+function enterReview() {
+  if (App.reviewMode) return;
+  App.reviewMode      = true;
+  App.reviewSnapshots = buildReviewSnapshots();
+  App.reviewIdx       = App.reviewSnapshots.length - 1;
+
+  applyReviewSnapshot(App.reviewIdx);
+  el('reviewBar').classList.add('show');
+  el('reviewBtn').classList.add('btn--active');
+  el('tagTurn').textContent = 'Review';
+  el('tagTurn').className   = 'tag tag--review';
+  App.canvas.classList.add('state--review');
+  setStatusDot('review');
+  el('statusText').textContent = 'Review mode';
+  el('statusSub').textContent  = 'Use ← → to navigate moves';
+
+  updateReviewUI();
+  updateUI();
+  render();
+}
+
+function exitReview() {
+  if (!App.reviewMode) return;
+  App.reviewMode      = false;
+  App.reviewSnapshots = [];
+
+  // Rebuild live engine state from move log
+  App.engine = new GoEngine(App.settings.size, App.settings.komi);
+  for (const m of App.moveLog) {
+    if (m.resign) break;
+    if (m.pass) App.engine.pass();
+    else        App.engine.makeMove(m.r, m.c);
+  }
+
+  el('reviewBar').classList.remove('show');
+  el('reviewBtn').classList.remove('btn--active');
+  App.canvas.classList.remove('state--review');
+
+  if (App.engine.gameOver) {
+    setStatusDot('over');
+    el('tagTurn').textContent = 'Game Over';
+    el('tagTurn').className   = 'tag tag--over';
+    el('statusText').textContent = 'Game over';
+  } else {
+    setStatusDot('black');
+    el('tagTurn').textContent = 'Your Turn';
+    el('tagTurn').className   = 'tag tag--live';
+    el('statusText').textContent = 'Your move';
+  }
+  el('statusSub').textContent = '';
+  updateUI();
+  render();
+}
+
+function toggleReview() {
+  if (App.reviewMode) {
+    exitReview();
+  } else if (App.engine.gameOver || App.moveLog.length > 0) {
+    enterReview();
+  }
+}
+
+function reviewStep(delta) {
+  if (!App.reviewMode) return;
+  App.reviewIdx = Math.max(0, Math.min(App.reviewSnapshots.length - 1, App.reviewIdx + delta));
+  applyReviewSnapshot(App.reviewIdx);
+  updateReviewUI();
+  updateUI();
+  render();
+}
+
+function reviewGoTo(idx) {
+  if (!App.reviewMode) return;
+  App.reviewIdx = idx === Infinity
+    ? App.reviewSnapshots.length - 1
+    : Math.max(0, Math.min(App.reviewSnapshots.length - 1, idx));
+  applyReviewSnapshot(App.reviewIdx);
+  updateReviewUI();
+  updateUI();
+  render();
+}
+
+function updateReviewUI() {
+  const total = Math.max(0, App.reviewSnapshots.length - 1);
+  el('reviewPos').textContent   = `${App.reviewIdx} / ${total}`;
+  el('revFirst').disabled = App.reviewIdx <= 0;
+  el('revPrev').disabled  = App.reviewIdx <= 0;
+  el('revNext').disabled  = App.reviewIdx >= total;
+  el('revLast').disabled  = App.reviewIdx >= total;
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 14 · UNDO / REDO
+// ─────────────────────────────────────────────────────────────
+
+/** Capture complete application state for the redo stack */
+function captureFullState() {
+  return {
+    board:         new Uint8Array(App.engine.board),
+    hash:          [...App.engine._hash],
+    posHistory:    new Set(App.engine._posHistory),
+    capturedBy:    [...App.engine.capturedBy],
+    passes:        App.engine.passes,
+    currentPlayer: App.engine.currentPlayer,
+    moveCount:     App.engine.moveCount,
+    gameOver:      App.engine.gameOver,
+    resignedBy:    App.engine.resignedBy,
+    moveLog:       App.moveLog.map(m => ({ ...m })),
+  };
+}
+
+function applyFullState(snap) {
+  App.engine.board         = snap.board;
+  App.engine._hash         = snap.hash;
+  App.engine._posHistory   = snap.posHistory;
+  App.engine.capturedBy    = snap.capturedBy;
+  App.engine.passes        = snap.passes;
+  App.engine.currentPlayer = snap.currentPlayer;
+  App.engine.moveCount     = snap.moveCount;
+  App.engine.gameOver      = snap.gameOver;
+  App.engine.resignedBy    = snap.resignedBy;
+  App.moveLog              = snap.moveLog;
+}
+
+function doUndo() {
+  if (App.animating || App.reviewMode) return;
+  if (App.aiTimer) { clearTimeout(App.aiTimer); App.aiTimer = null; }
+  if (!App.engine.canUndo()) return;
+
+  // Save to redo stack before undoing
+  App.redoStack.push(captureFullState());
+
+  // Undo both the AI reply and the player's move so we land on BLACK's turn
+  let undone = 0;
+  while (undone < 2 && App.engine.canUndo()) {
+    if (!App.engine.undo()) break;
+    if (App.moveLog.length) App.moveLog.pop();
+    undone++;
+  }
+  // Guard: if we somehow ended on WHITE's turn, undo one more
+  while (App.engine.currentPlayer === CELL_WHITE && App.engine.canUndo()) {
+    App.engine.undo();
+    if (App.moveLog.length) App.moveLog.pop();
+  }
+
+  App.hintPos = null;
+  App.engine.gameOver  = false;
+  App.engine.resignedBy = null;
+
+  el('gameOverlay').classList.remove('show');
+  App.canvas.classList.remove('state--over', 'state--ai-turn');
+  setStatusDot('black');
+  el('tagTurn').textContent    = 'Your Turn';
+  el('tagTurn').className      = 'tag tag--live';
+  el('statusText').textContent = 'Your move';
+  el('statusSub').innerHTML    = '';
+
+  updateUI();
+  render();
+}
+
+function doRedo() {
+  if (App.animating || App.reviewMode || !App.redoStack.length) return;
+  const snap = App.redoStack.pop();
+  applyFullState(snap);
+  App.hintPos = null;
+
+  if (App.engine.gameOver) {
+    endGame();
+  } else {
+    setStatusDot('black');
+    el('tagTurn').textContent    = 'Your Turn';
+    el('tagTurn').className      = 'tag tag--live';
+    el('statusText').textContent = 'Your move';
+    el('statusSub').innerHTML    = '';
+    el('gameOverlay').classList.remove('show');
+    App.canvas.classList.remove('state--over', 'state--ai-turn');
+    updateUI();
+    render();
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 15 · GAME FLOW
+// ─────────────────────────────────────────────────────────────
+
+function execHumanMove(r, c) {
+  if (App.animating || App.engine.gameOver || App.reviewMode) return;
+  if (App.engine.currentPlayer !== CELL_BLACK) return;
+
+  const result = App.engine.makeMove(r, c);
+  if (!result) return;
+
+  App.redoStack = [];
+  App.hintPos   = null;
+  App.moveLog.push({
+    color:    CELL_BLACK,
+    r, c,
+    pass:     false,
+    resign:   false,
+    captured: result.capturedCount,
+    coord:    coordStr(r, c),
+  });
+  updateUI();
+
+  animPlace(r, c, CELL_BLACK, () => {
+    if (result.capturedCount > 0) {
+      spawnCaptures(result.captured, CELL_WHITE, () => { render(); afterPlayerMove(); });
+    } else {
+      render();
+      afterPlayerMove();
+    }
+  });
+}
+
+function afterPlayerMove() {
+  if (App.engine.gameOver || App.engine.isBoardFull()) {
+    endGame();
+    return;
+  }
+  updateUI();
+  render();
+  if (App.engine.currentPlayer === CELL_WHITE) scheduleAI();
+}
+
+function scheduleAI() {
+  setStatusDot('thinking');
+  el('statusText').textContent = 'AI thinking…';
+  el('statusSub').innerHTML    = '<span class="ldots"><span></span><span></span><span></span></span>';
+  el('tagTurn').textContent    = 'AI';
+  el('tagTurn').className      = 'tag tag--ai';
+  App.canvas.classList.add('state--ai-turn');
+
+  App.aiTimer = setTimeout(() => {
+    const move = computeAIMove(App.engine, App.settings.diff);
+
+    el('statusSub').innerHTML = '';
+    el('tagTurn').textContent = 'Your Turn';
+    el('tagTurn').className   = 'tag tag--live';
+    App.canvas.classList.remove('state--ai-turn');
+
+    if (!move) {
+      // AI has no legal moves; pass
+      const result = App.engine.pass();
+      App.moveLog.push({ color: CELL_WHITE, pass: true, resign: false, captured: 0, coord: 'pass' });
+      updateUI();
+      if (result.gameOver) { endGame(); return; }
+      afterAI();
+      return;
+    }
+
+    const result = App.engine.makeMove(move.r, move.c);
+    if (!result) {
+      // Fallback: pass
+      App.engine.pass();
+      App.moveLog.push({ color: CELL_WHITE, pass: true, resign: false, captured: 0, coord: 'pass' });
+      updateUI();
+      render();
+      return;
+    }
+
+    App.moveLog.push({
+      color:    CELL_WHITE,
+      r:        move.r,
+      c:        move.c,
+      pass:     false,
+      resign:   false,
+      captured: result.capturedCount,
+      coord:    coordStr(move.r, move.c),
+    });
+    updateUI();
+
+    animPlace(move.r, move.c, CELL_WHITE, () => {
+      if (result.capturedCount > 0) {
+        spawnCaptures(result.captured, CELL_BLACK, () => { render(); afterAI(); });
+      } else {
+        render();
+        afterAI();
+      }
+    });
+  }, 55);
+}
+
+function afterAI() {
+  if (App.engine.gameOver || App.engine.isBoardFull()) {
+    endGame();
+    return;
+  }
+  setStatusDot('black');
+  el('statusText').textContent = 'Your move';
+  updateUI();
+  render();
+}
+
+function doPass() {
+  if (App.animating || App.engine.gameOver || App.reviewMode) return;
+  if (App.engine.currentPlayer !== CELL_BLACK) return;
+
+  App.redoStack = [];
+  App.hintPos   = null;
+  const result  = App.engine.pass();
+  App.moveLog.push({ color: CELL_BLACK, pass: true, resign: false, captured: 0, coord: 'pass' });
+  updateUI();
+
+  if (result.gameOver) { endGame(); return; }
+  render();
+  scheduleAI();
+}
+
+function doResign() {
+  if (App.engine.gameOver || App.reviewMode) return;
+  App.engine.resign(CELL_BLACK);
+  App.moveLog.push({ color: CELL_BLACK, pass: false, resign: true, captured: 0, coord: 'resign' });
+  endGame(true);
+}
+
+function endGame(resigned = false) {
+  App.engine.gameOver = true;
+  if (App.aiTimer) { clearTimeout(App.aiTimer); App.aiTimer = null; }
+
+  const score = App.engine.getScore();
+  let winnerText, subText;
+
+  if (resigned || App.engine.resignedBy === CELL_BLACK) {
+    winnerText = 'White <em>wins</em>';
+    subText    = 'Black resigned';
+  } else {
+    const bWins = score.black > score.white;
+    const draw  = score.black === score.white;
+    winnerText  = draw
+      ? 'Draw'
+      : bWins
+        ? 'Black <em>wins</em>'
+        : 'White <em>wins</em>';
+    const margin = Math.abs(score.black - score.white).toFixed(1);
+    subText = draw ? `Perfectly even · komi ${App.engine.komi}` : `by ${margin} pts · komi ${App.engine.komi}`;
+  }
+
+  el('overlayWinner').innerHTML  = winnerText;
+  el('overlayMargin').textContent = subText;
+  el('overlayScoreB').textContent = score.black.toFixed(1);
+  el('overlayScoreW').textContent = score.white.toFixed(1);
+  el('gameOverlay').classList.add('show');
+
+  setStatusDot('over');
+  el('statusText').textContent = 'Game over';
+  el('tagTurn').textContent    = 'Game Over';
+  el('tagTurn').className      = 'tag tag--over';
+  App.canvas.classList.add('state--over');
+  App.canvas.classList.remove('state--ai-turn');
+
+  updateUI();
+  render();
+}
+
+function requestHint() {
+  if (App.animating || App.engine.gameOver || App.reviewMode) return;
+  if (App.engine.currentPlayer !== CELL_BLACK) return;
+
+  const btn = el('hintBtn');
+  btn.textContent = '⏳';
+  btn.classList.add('icon-btn--hint-active');
+
+  setTimeout(() => {
+    // Use at least intermediate strength for hints
+    const hintDiff = App.settings.diff === 'beginner' ? 'intermediate' : App.settings.diff;
+    const move = computeAIMove(App.engine, hintDiff);
+
+    btn.textContent = '◎';
+    if (!move) { btn.classList.remove('icon-btn--hint-active'); return; }
+
+    App.hintPos = move;
+    scheduleRender();
+
+    setTimeout(() => {
+      App.hintPos = null;
+      btn.classList.remove('icon-btn--hint-active');
+      if (!App.rafId) render();
+    }, 4200);
+  }, 20);
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 16 · NEW GAME
+// ─────────────────────────────────────────────────────────────
+
+function newGame() {
+  if (App.reviewMode) exitReview();
+  if (App.aiTimer)   { clearTimeout(App.aiTimer); App.aiTimer = null; }
+  if (App.rafId)     { cancelAnimationFrame(App.rafId); App.rafId = null; }
+
+  App.moveLog    = [];
+  App.redoStack  = [];
+  App.hintPos    = null;
+  App.animating  = false;
+  App.hoverPos   = null;
+  App.showTerr   = false;
+  App.showNums   = false;
+  App.particles  = [];
+
+  // Reset button states
+  el('terrBtn').classList.remove('btn--active');
+  el('numsBtn').classList.remove('btn--active');
+  el('reviewBtn').classList.remove('btn--active');
+  el('gameOverlay').classList.remove('show');
+  el('statusSub').innerHTML = '';
+  el('nodesDisplay').textContent = '—';
+  el('depthDisplay').textContent = '—';
+  el('komiDisplay').textContent  = App.settings.komi;
+  el('tagTurn').textContent      = 'Your Turn';
+  el('tagTurn').className        = 'tag tag--live';
+  el('tagSize').textContent      = App.settings.size + '×' + App.settings.size;
+  el('tagDiff').textContent      = App.settings.diff.charAt(0).toUpperCase() + App.settings.diff.slice(1);
+  el('reviewBar').classList.remove('show');
+  el('aiRole').textContent = 'White · ' + (App.settings.diff === 'beginner' ? 'Random' : 'Minimax');
+
+  if (App.canvas) App.canvas.classList.remove('state--ai-turn', 'state--over', 'state--review');
+
+  ttClear();
+  App.engine = new GoEngine(App.settings.size, App.settings.komi);
+  initCanvas(App.settings.size);
+  setStatusDot('black');
+  el('statusText').textContent = 'Your move';
+
+  updateUI();
+  render();
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 17 · UI UPDATES
+// ─────────────────────────────────────────────────────────────
+
+/** Set the status indicator dot class */
+function setStatusDot(state) {
+  el('statusDot').className = `status-dot status-dot--${state}`;
+}
+
+function toggleTerr() {
+  App.showTerr = !App.showTerr;
+  el('terrBtn').classList.toggle('btn--active', App.showTerr);
+  el('terrLegend').classList.toggle('show', App.showTerr);
+  render();
+}
+
+function toggleNums() {
+  App.showNums = !App.showNums;
+  el('numsBtn').classList.toggle('btn--active', App.showNums);
+  render();
+}
+
+/** Refresh all data-driven UI elements */
+function updateUI() {
+  const { engine, moveLog, reviewMode, reviewIdx, redoStack } = App;
+  const score = engine.getScore();
+
+  // Capture counts
+  el('capBlack').textContent = engine.capturedBy[CELL_BLACK];
+  el('capWhite').textContent = engine.capturedBy[CELL_WHITE];
+
+  const totalCap = engine.capturedBy[CELL_BLACK] + engine.capturedBy[CELL_WHITE];
+  const capPct   = totalCap > 0 ? (engine.capturedBy[CELL_BLACK] / totalCap) * 100 : 50;
+  el('captureFill').style.width = Math.max(5, Math.min(95, capPct)) + '%';
+
+  // Score & evaluation bar
+  el('evalBlack').textContent = score.black.toFixed(1);
+  el('evalWhite').textContent = score.white.toFixed(1);
+  const totalScore = score.black + score.white;
+  const evalPct    = totalScore > 0 ? (score.black / totalScore) * 100 : 50;
+  el('evalFill').style.width = Math.max(5, Math.min(95, evalPct)) + '%';
+
+  // Move counter
+  const stoneCount = reviewMode
+    ? reviewIdx
+    : moveLog.filter(m => !m.pass && !m.resign).length;
+  el('moveNumDisplay').textContent = String(stoneCount).padStart(2, '0');
+
+  // Button states
+  el('undoBtn').disabled = !engine.canUndo() || reviewMode;
+  el('redoBtn').disabled = redoStack.length === 0 || reviewMode;
+
+  // Move history list
+  updateHistoryList();
+}
+
+function updateHistoryList() {
+  const { moveLog, reviewMode, reviewIdx } = App;
+  const hist = el('histList');
+
+  if (!moveLog.length) {
+    hist.innerHTML = '<div class="hist-empty">Waiting for first move…</div>';
+    return;
+  }
+
+  const displayLen = reviewMode ? reviewIdx : moveLog.length;
+  let html = '';
+
+  for (let i = 0; i < moveLog.length; i++) {
+    const m          = moveLog[i];
+    const colorCls   = m.color === CELL_BLACK ? 'hist-row--black' : 'hist-row--white';
+    const isLast     = !reviewMode && i === moveLog.length - 1;
+    const isReviewCurr = reviewMode && i === reviewIdx - 1;
+    const numStr     = (!m.pass && !m.resign) ? `${i + 1}.` : '';
+    const capStr     = m.captured > 0 ? `<span class="hist-cap">+${m.captured}</span>` : '';
+    const fadedStyle = reviewMode && i >= displayLen ? ' style="opacity:.16"' : '';
+
+    const clickHandler = reviewMode ? `onclick="reviewGoTo(${i + 1})"` : '';
+    const extraCls     = [
+      isLast        ? 'hist-row--latest'      : '',
+      isReviewCurr  ? 'hist-row--review-curr' : '',
+    ].filter(Boolean).join(' ');
+
+    html += `<div class="hist-row ${colorCls} ${extraCls}" ${clickHandler}${fadedStyle}>` +
+              `<span class="hist-num">${numStr}</span>` +
+              `<div class="hist-dot"></div>` +
+              `<span class="hist-coord">${m.coord}</span>` +
+              capStr +
+            `</div>`;
+  }
+
+  hist.innerHTML = html;
+  if (!reviewMode) hist.scrollTop = hist.scrollHeight;
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 18 · SETTINGS & MODALS
+// ─────────────────────────────────────────────────────────────
+
+function selectOpt(groupId, element, callback) {
+  document.querySelectorAll(`#${groupId} .opt`).forEach(btn => btn.classList.remove('opt--sel'));
+  element.classList.add('opt--sel');
+  callback();
+}
+
+function setPending(key, val) {
+  App.pending[key] = val;
+  if (key === 'komi') el('komiCustom').value = val;
+}
+
+function setPendingKomiCustom(rawVal) {
+  const v = parseFloat(rawVal);
+  if (isNaN(v)) return;
+  App.pending.komi = v;
+  document.querySelectorAll('#komiOpts .opt').forEach(btn => btn.classList.remove('opt--sel'));
+}
+
+function openSettings() {
+  App.pending = { ...App.settings };
+  syncOptGroup('sizeOpts', App.settings.size);
+  syncOptGroup('diffOpts',  App.settings.diff);
+  syncOptGroup('komiOpts',  App.settings.komi);
+  el('komiCustom').value = App.settings.komi;
+  el('settingsModal').classList.add('open');
+}
+
+function syncOptGroup(id, val) {
+  document.querySelectorAll(`#${id} .opt`).forEach(btn => {
+    btn.classList.toggle('opt--sel', btn.dataset.val == val);
+  });
+}
+
+function closeSettings() { el('settingsModal').classList.remove('open'); }
+
+function applySettings() {
+  App.settings = { ...App.pending };
+  closeSettings();
+  newGame();
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 19 · SGF IMPORT / EXPORT
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Build an SGF string from the current move log.
+ * Complies with SGF FF[4] format.
+ */
+function buildSGF() {
+  const { size, komi } = App.settings;
+  let sgf = `(;FF[4]GM[1]SZ[${size}]KM[${komi}]CA[UTF-8]AP[StoneGarden:4.0]\n`;
+
+  for (const m of App.moveLog) {
+    const token = m.color === CELL_BLACK ? 'B' : 'W';
+    if (m.resign)     { sgf += `;${token}[resign]`; continue; }
+    if (m.pass)       { sgf += `;${token}[]`;       continue; }
+    sgf += `;${token}[${SGF_ALPHA[m.c]}${SGF_ALPHA[m.r]}]`;
+  }
+  return sgf + ')';
+}
+
+function openSGF() {
+  el('sgfExportText').value = buildSGF();
+  el('sgfImportText').value = '';
+  el('importError').classList.remove('show');
+  el('sgfModal').classList.add('open');
+}
+
+function closeSGF() { el('sgfModal').classList.remove('open'); }
+
+function copySGF() {
+  const ta = el('sgfExportText');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).catch(() => document.execCommand('copy'));
+
+  const btn  = event.target;
+  const orig = btn.textContent;
+  btn.textContent = 'Copied!';
+  setTimeout(() => (btn.textContent = orig), 1500);
+}
+
+function importSGF() {
+  const raw     = el('sgfImportText').value.trim();
+  const errEl   = el('importError');
+  errEl.classList.remove('show');
+
+  if (!raw) {
+    errEl.textContent = 'Please paste an SGF string above.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  try {
+    const sizeMatch = raw.match(/SZ\[(\d+)\]/);
+    const komiMatch = raw.match(/KM\[([\d.]+)\]/);
+    const size = sizeMatch ? parseInt(sizeMatch[1], 10) : 9;
+    const komi = komiMatch ? parseFloat(komiMatch[1]) : 6.5;
+
+    if (![5, 7, 9].includes(size)) throw new Error('Board size must be 5, 7, or 9.');
+
+    const MOVE_RE = /;([BW])\[([a-s]{0,2})\]/g;
+    const parsedMoves = [];
+    let match;
+
+    while ((match = MOVE_RE.exec(raw)) !== null) {
+      const color  = match[1] === 'B' ? CELL_BLACK : CELL_WHITE;
+      const coord  = match[2];
+
+      if (!coord || coord === 'resign') {
+        parsedMoves.push({ color, pass: coord === '' });
+      } else {
+        const c = SGF_ALPHA.indexOf(coord[0]);
+        const r = SGF_ALPHA.indexOf(coord[1]);
+        if (c < 0 || r < 0 || c >= size || r >= size) {
+          throw new Error(`Invalid coordinate: "${coord}".`);
+        }
+        parsedMoves.push({ color, r, c, pass: false });
+      }
+    }
+
+    App.settings.size = size;
+    App.settings.komi = komi;
+    closeSGF();
+    newGame();
+
+    for (const m of parsedMoves) {
+      if (m.pass) {
+        App.engine.pass();
+        App.moveLog.push({ color: m.color, pass: true, resign: false, captured: 0, coord: 'pass' });
+      } else {
+        const result = App.engine.makeMove(m.r, m.c);
+        if (result) {
+          App.moveLog.push({
+            color: m.color,
+            r: m.r, c: m.c,
+            pass: false,
+            resign: false,
+            captured: result.capturedCount,
+            coord: coordStr(m.r, m.c),
+          });
+        }
+      }
+    }
+
+    if (App.engine.gameOver) endGame();
+    else { updateUI(); render(); }
+
+  } catch (err) {
+    errEl.textContent = 'Parse error: ' + err.message;
+    errEl.classList.add('show');
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 20 · EVENT HANDLERS
+// ─────────────────────────────────────────────────────────────
+
+// ── Board interaction ────────────────────────────────────────
+
+el('board').addEventListener('click', e => {
+  if (App.reviewMode) return;
+  const rect = App.canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (App.SZ / rect.width);
+  const y = (e.clientY - rect.top)  * (App.SZ / rect.height);
+  const pos = xyToGrid(x, y);
+  if (pos) execHumanMove(pos.r, pos.c);
+});
+
+el('board').addEventListener('mousemove', e => {
+  const rect = App.canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (App.SZ / rect.width);
+  const y = (e.clientY - rect.top)  * (App.SZ / rect.height);
+  const pos = xyToGrid(x, y);
+
+  if (!pos) {
+    if (App.hoverPos) { App.hoverPos = null; if (!App.animating) render(); }
+    return;
+  }
+  if (App.hoverPos?.r === pos.r && App.hoverPos?.c === pos.c) return;
+  App.hoverPos = pos;
+  if (!App.animating) render();
+});
+
+el('board').addEventListener('mouseleave', () => {
+  App.hoverPos = null;
+  if (!App.animating) render();
+});
+
+// Touch support
+el('board').addEventListener('touchend', e => {
+  e.preventDefault();
+  if (App.reviewMode) return;
+  const touch = e.changedTouches[0];
+  const rect  = App.canvas.getBoundingClientRect();
+  const x = (touch.clientX - rect.left) * (App.SZ / rect.width);
+  const y = (touch.clientY - rect.top)  * (App.SZ / rect.height);
+  const pos = xyToGrid(x, y);
+  if (pos) execHumanMove(pos.r, pos.c);
+}, { passive: false });
+
+// ── Keyboard shortcuts ───────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const key = e.key;
+
+  switch (key) {
+    case 'p': case 'P': doPass();   break;
+    case 'q': case 'Q': doResign(); break;
+    case 'r': case 'R': if (!App.engine.gameOver) newGame(); break;
+    case 't': case 'T': toggleTerr(); break;
+    case 'n': case 'N': toggleNums(); break;
+    case 'h': case 'H': requestHint(); break;
+    case 's': case 'S': openSGF(); break;
+    case ',':           openSettings(); break;
+    case 'Enter':       toggleReview(); break;
+    case 'Escape':
+      closeSGF();
+      closeSettings();
+      if (App.reviewMode) exitReview();
+      break;
+    case 'z': case 'Z':
+      e.preventDefault();
+      doUndo();
+      break;
+    case 'y': case 'Y':
+      e.preventDefault();
+      doRedo();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      App.reviewMode ? reviewStep(-1) : doUndo();
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      if (App.reviewMode) reviewStep(1);
+      break;
+    case 'Home':
+      e.preventDefault();
+      if (App.reviewMode) reviewGoTo(0);
+      break;
+    case 'End':
+      e.preventDefault();
+      if (App.reviewMode) reviewGoTo(Infinity);
+      break;
+  }
+});
+
+// ── Modal backdrop dismiss ───────────────────────────────────
+
+el('settingsModal').addEventListener('click', e => {
+  if (e.target === el('settingsModal')) closeSettings();
+});
+el('sgfModal').addEventListener('click', e => {
+  if (e.target === el('sgfModal')) closeSGF();
+});
+
+// ── Resize ───────────────────────────────────────────────────
+
+window.addEventListener('resize', () => {
+  if (App.engine) { initCanvas(App.settings.size); render(); }
+}, { passive: true });
+
+
+// ─────────────────────────────────────────────────────────────
+// SECTION 21 · BOOT
+// ─────────────────────────────────────────────────────────────
+
+newGame();
+</script>
+</body>
+</html>
