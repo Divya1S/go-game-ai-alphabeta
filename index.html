@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stone Garden · Go AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0A0906;--paper:#F2EDE3;--paper2:#E8E1D3;--paper3:#DDD5C5;
+  --wood:#B87333;--wood-dark:#7A4A1A;--gold:#C8923A;--red-acc:#C0392B;
+  --muted:#8A8070;--muted2:#6A6050;
+  --border:rgba(10,9,6,0.12);--border2:rgba(10,9,6,0.22);
+}
+html,body{height:100%;background:var(--paper);}
+body{
+  font-family:'JetBrains Mono','SF Mono',monospace;
+  display:flex;justify-content:center;padding:0;min-height:100vh;
+  background:var(--paper);
+  background-image:
+    radial-gradient(circle at 20% 80%,rgba(184,115,51,.06) 0%,transparent 50%),
+    radial-gradient(circle at 80% 20%,rgba(192,57,43,.04) 0%,transparent 50%);
+}
+.app{
+  display:grid;
+  grid-template-columns:1fr 420px 280px 1fr;
+  grid-template-rows:auto 1fr auto;
+  min-height:100vh;max-width:1100px;margin:0 auto;padding:0 24px;
+}
+/* HEADER */
+.masthead{
+  grid-column:1/-1;display:flex;align-items:baseline;justify-content:space-between;
+  padding:32px 0 24px;border-bottom:1px solid var(--border);
+}
+.logotype{
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-size:32px;font-weight:300;letter-spacing:.04em;color:var(--ink);line-height:1;
+}
+.logotype span{color:var(--wood);font-style:italic;}
+.meta-tags{display:flex;gap:8px;align-items:center;}
+.tag{
+  font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);
+  border:.5px solid var(--border2);padding:4px 10px;border-radius:2px;
+}
+.tag.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+/* LEFT PANEL */
+.panel-left{
+  grid-column:1/2;padding:40px 24px 40px 0;
+  display:flex;flex-direction:column;justify-content:space-between;
+  border-right:.5px solid var(--border);
+}
+.move-num{
+  font-size:72px;font-weight:300;color:var(--ink);opacity:.08;
+  line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums;
+}
+.algo-info{display:flex;flex-direction:column;gap:14px;}
+.algo-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:8px 0;border-bottom:.5px solid var(--border);font-size:10px;
+}
+.algo-key{color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.algo-val{color:var(--ink);font-weight:500;}
+.eval-bar-wrap{margin-top:auto;padding-top:24px;}
+.eval-label{
+  font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;
+}
+.eval-track{height:3px;background:var(--border2);position:relative;overflow:hidden;}
+.eval-fill{
+  position:absolute;left:0;top:0;height:100%;background:var(--ink);
+  transition:width .8s cubic-bezier(.22,1,.36,1);
+}
+.eval-scores{
+  display:flex;justify-content:space-between;margin-top:6px;
+  font-size:11px;color:var(--muted);
+}
+.eval-scores span{color:var(--ink);font-weight:500;}
+/* BOARD */
+.board-zone{
+  grid-column:2/3;padding:32px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.board-container{position:relative;}
+#board{
+  display:block;border-radius:4px;cursor:crosshair;
+  box-shadow:0 0 0 1px rgba(122,74,26,.3),0 8px 32px rgba(0,0,0,.22),0 2px 8px rgba(0,0,0,.14);
+}
+#board.ai-turn{cursor:not-allowed;}
+#board.over{cursor:default;}
+/* OVERLAY */
+.overlay{
+  display:none;position:absolute;inset:0;background:rgba(242,237,227,.94);
+  border-radius:4px;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;backdrop-filter:blur(4px) saturate(.8);text-align:center;z-index:10;
+}
+.overlay.show{display:flex;}
+.ov-result{
+  font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;
+  letter-spacing:.02em;color:var(--ink);
+}
+.ov-sub{font-size:11px;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;}
+.ov-scores{
+  display:flex;gap:24px;font-size:13px;color:var(--muted2);
+  border-top:.5px solid var(--border);border-bottom:.5px solid var(--border);padding:10px 32px;
+}
+.ov-scores b{color:var(--ink);font-weight:500;}
+.btn-play{
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;padding:10px 28px;border:.5px solid var(--ink);
+  background:var(--ink);color:var(--paper);cursor:pointer;border-radius:2px;transition:all .15s;
+}
+.btn-play:hover{background:var(--paper);color:var(--ink);}
+/* RIGHT PANEL */
+.panel-right{
+  grid-column:3/4;padding:40px 0 40px 28px;
+  border-left:.5px solid var(--border);display:flex;flex-direction:column;
+}
+.status-line{
+  display:flex;align-items:center;gap:10px;padding-bottom:20px;
+  border-bottom:.5px solid var(--border);margin-bottom:20px;
+}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s;}
+.dot.black{background:var(--ink);}
+.dot.white{background:transparent;border:1.5px solid var(--ink);}
+.dot.thinking{background:var(--gold);animation:pulse .7s infinite;}
+.dot.over{background:var(--red-acc);}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+.turn-label{font-size:12px;color:var(--ink);letter-spacing:.04em;}
+.thinking-sub{font-size:9px;color:var(--muted);letter-spacing:.08em;margin-left:18px;margin-top:3px;min-height:13px;}
+.players{display:flex;flex-direction:column;margin-bottom:24px;}
+.player{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid var(--border);}
+.stone-icon{width:22px;height:22px;border-radius:50%;flex-shrink:0;}
+.stone-icon.black{
+  background:radial-gradient(circle at 35% 35%,#555,#0A0906);
+  box-shadow:inset -1px -1px 3px rgba(0,0,0,.4),inset 1px 1px 2px rgba(255,255,255,.1);
+}
+.stone-icon.white{
+  background:radial-gradient(circle at 35% 35%,#fff,#DDD5C5);
+  box-shadow:inset -1px -1px 3px rgba(0,0,0,.15),inset 1px 1px 2px rgba(255,255,255,.8),0 0 0 .5px rgba(0,0,0,.2);
+}
+.player-info{flex:1;}
+.player-name{font-size:12px;color:var(--ink);}
+.player-role{font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.capture-count{font-size:11px;color:var(--muted);text-align:right;}
+.capture-count span{display:block;font-size:16px;color:var(--ink);font-weight:500;line-height:1.2;}
+.capture-vis{height:2px;background:var(--border);margin-bottom:24px;position:relative;}
+.capture-bar{position:absolute;left:0;top:0;height:100%;background:var(--ink);transition:width .6s cubic-bezier(.22,1,.36,1);}
+.hist-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.hist-scroll{flex:1;overflow-y:auto;max-height:200px;display:flex;flex-direction:column;gap:2px;}
+.hist-scroll::-webkit-scrollbar{width:2px;}
+.hist-scroll::-webkit-scrollbar-thumb{background:var(--border2);}
+.h-row{
+  display:grid;grid-template-columns:28px 16px 1fr;gap:6px;align-items:center;
+  font-size:10px;padding:2px 0;opacity:.55;transition:opacity .2s;
+}
+.h-row.last{opacity:1;}
+.h-row.black-move .h-dot{background:var(--ink);}
+.h-row.white-move .h-dot{background:transparent;border:1px solid var(--ink);}
+.h-dot{width:8px;height:8px;border-radius:50%;}
+.h-n{color:var(--muted);font-size:9px;}
+.h-coord{color:var(--ink);}
+.h-empty{color:var(--muted);font-style:italic;font-size:10px;}
+.controls{margin-top:24px;padding-top:20px;border-top:.5px solid var(--border);display:flex;flex-direction:column;gap:8px;}
+.ctrl-row{display:flex;gap:8px;}
+.btn{
+  flex:1;padding:9px 10px;background:transparent;border:.5px solid var(--border2);
+  color:var(--muted2);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  font-family:'JetBrains Mono',monospace;cursor:pointer;border-radius:2px;transition:all .12s;
+}
+.btn:hover{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+.btn:active{transform:scale(.97);}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+.btn.primary:hover{background:var(--wood-dark);}
+.btn.toggled{border-color:var(--gold);color:var(--gold);}
+.kb-hints{font-size:9px;color:var(--muted);letter-spacing:.06em;text-align:center;margin-top:4px;opacity:.6;}
+/* FOOTER */
+.footer-bar{
+  grid-column:1/-1;padding:20px 0 32px;
+  border-top:.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;
+}
+.footer-copy{font-size:9px;color:var(--muted);letter-spacing:.08em;}
+.tech-stack{display:flex;gap:6px;flex-wrap:wrap;}
+.tech-pill{
+  font-size:8px;letter-spacing:.1em;text-transform:uppercase;
+  border:.5px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:20px;
+}
+/* TERRITORY */
+.terr-legend{display:none;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:9px;color:var(--muted);}
+.terr-legend.show{display:flex;}
+.tl-item{display:flex;align-items:center;gap:5px;}
+.tl-swatch{width:10px;height:10px;border-radius:1px;}
+/* THINKING DOTS */
+.dots span{
+  display:inline-block;width:4px;height:4px;border-radius:50%;
+  background:var(--gold);margin:0 1px;animation:dotBounce .9s ease-in-out infinite;
+}
+.dots span:nth-child(2){animation-delay:.15s;}
+.dots span:nth-child(3){animation-delay:.3s;}
+@keyframes dotBounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="masthead">
+    <h1 class="logotype">Stone Garden &mdash; <span>Go AI</span></h1>
+    <div class="meta-tags">
+      <span class="tag">5×5 Board</span>
+      <span class="tag">Minimax</span>
+      <span class="tag">α-β Pruning</span>
+      <span class="tag">Depth 4</span>
+      <span class="tag active" id="aiStatusTag">Human Turn</span>
+    </div>
+  </header>
+
+  <aside class="panel-left">
+    <div>
+      <div class="move-num" id="moveNumDisplay">00</div>
+      <div style="font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:-8px;margin-bottom:32px;">Move</div>
+    </div>
+    <div class="algo-info">
+      <div class="algo-row"><span class="algo-key">Algorithm</span><span class="algo-val">Minimax</span></div>
+      <div class="algo-row"><span class="algo-key">Pruning</span><span class="algo-val">α-β</span></div>
+      <div class="algo-row"><span class="algo-key">Search depth</span><span class="algo-val">4 ply</span></div>
+      <div class="algo-row"><span class="algo-key">Eval fn</span><span class="algo-val">Territory+Liberties</span></div>
+      <div class="algo-row"><span class="algo-key">Ko rule</span><span class="algo-val">Super-ko</span></div>
+      <div class="algo-row"><span class="algo-key">Komi</span><span class="algo-val">2.5</span></div>
+      <div class="algo-row"><span class="algo-key">Nodes/sec</span><span class="algo-val" id="nodesPerSec">—</span></div>
+    </div>
+    <div class="eval-bar-wrap">
+      <div class="eval-label"><span>◆ Black</span><span>White ◆</span></div>
+      <div class="eval-track"><div class="eval-fill" id="evalFill" style="width:50%"></div></div>
+      <div class="eval-scores">
+        <span id="bScore">—</span>
+        <span style="font-size:9px;color:var(--muted)">position</span>
+        <span id="wScore">—</span>
+      </div>
+      <div class="terr-legend" id="terrLegend">
+        <div class="tl-item"><div class="tl-swatch" style="background:rgba(10,9,6,.22)"></div>Black territory</div>
+        <div class="tl-item"><div class="tl-swatch" style="background:rgba(184,115,51,.28)"></div>White territory</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="board-zone">
+    <div class="board-container">
+      <canvas id="board"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="ov-result" id="ovTitle">Game Over</div>
+        <div class="ov-sub" id="ovSub">by territory + captures</div>
+        <div class="ov-scores">
+          <div>Black <b id="ovB">—</b></div>
+          <div style="color:var(--muted)">vs</div>
+          <div>White <b id="ovW">—</b></div>
+        </div>
+        <button class="btn-play" onclick="resetGame()">Play again</button>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel-right">
+    <div class="status-line">
+      <div class="dot black" id="dot"></div>
+      <div>
+        <div class="turn-label" id="turnText">Your move</div>
+        <div class="thinking-sub" id="thinkSub"></div>
+      </div>
+    </div>
+    <div class="players">
+      <div class="player">
+        <div class="stone-icon black"></div>
+        <div class="player-info">
+          <div class="player-name">You</div>
+          <div class="player-role">Black · First</div>
+        </div>
+        <div class="capture-count"><span id="bCap">0</span>cap</div>
+      </div>
+      <div class="player">
+        <div class="stone-icon white"></div>
+        <div class="player-info">
+          <div class="player-name">AI</div>
+          <div class="player-role">White · Minimax</div>
+        </div>
+        <div class="capture-count"><span id="wCap">0</span>cap</div>
+      </div>
+    </div>
+    <div class="capture-vis"><div class="capture-bar" id="capBar" style="width:50%"></div></div>
+    <div class="hist-label">Move record</div>
+    <div class="hist-scroll" id="histList">
+      <div class="h-empty">Waiting for first move…</div>
+    </div>
+    <div class="controls">
+      <div class="ctrl-row">
+        <button class="btn" onclick="passTurn()">Pass <span style="opacity:.5">[P]</span></button>
+        <button class="btn" id="terrBtn" onclick="toggleTerritory()">Territory <span style="opacity:.5">[T]</span></button>
+      </div>
+      <div class="ctrl-row">
+        <button class="btn" onclick="undoMove()">Undo <span style="opacity:.5">[Z]</span></button>
+        <button class="btn primary" onclick="resetGame()">New game <span style="opacity:.5">[R]</span></button>
+      </div>
+      <div class="kb-hints">keyboard shortcuts enabled</div>
+    </div>
+  </aside>
+
+  <footer class="footer-bar">
+    <span class="footer-copy">Stone Garden · Go AI · 5×5 · © 2025</span>
+    <div class="tech-stack">
+      <span class="tech-pill">Canvas 2D</span>
+      <span class="tech-pill">Minimax</span>
+      <span class="tech-pill">α-β Pruning</span>
+      <span class="tech-pill">Super-ko</span>
+      <span class="tech-pill">Territory Scoring</span>
+      <span class="tech-pill">Web Animations</span>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════╗
+// ║   STONE GARDEN · Go AI Engine                            ║
+// ║   Minimax + α-β · Super-ko · Territory scoring           ║
+// ╚══════════════════════════════════════════════════════════╝
+
+const BS=5, EMPTY=0, BLACK=1, WHITE=2, KOMI=2.5;
+const COLS=['A','B','C','D','E'];
+const DIRS=[[-1,0],[1,0],[0,-1],[0,1]];
+
+// Canvas
+const canvas=document.getElementById('board');
+const ctx=canvas.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);
+const SZ=360, PAD=44, CELL=(SZ-PAD*2)/(BS-1), SR=26;
+canvas.width=SZ*DPR; canvas.height=SZ*DPR;
+canvas.style.width=SZ+'px'; canvas.style.height=SZ+'px';
+ctx.scale(DPR,DPR);
+
+// State
+let board,prevBoard,prevPrevBoard,caps,player,moveLog,over,passes,lastMv;
+let animating=false,showTerr=false,hov=null,nodesExplored=0,aiTimerId=null;
+
+// ── Primitives ────────────────────────────────────────────────
+const mk=()=>Array.from({length:BS},()=>new Int8Array(BS));
+const copyB=b=>{const n=mk();for(let r=0;r<BS;r++)n[r].set(b[r]);return n;};
+const bKey=b=>b.map(r=>Array.from(r).join('')).join('|');
+const bEq=(a,b)=>bKey(a)===bKey(b);
+const inB=(r,c)=>r>=0&&r<BS&&c>=0&&c<BS;
+
+// ── Go rules ──────────────────────────────────────────────────
+function group(b,r,c){
+  const col=b[r][c]; if(!col)return[];
+  const vis=new Set(),stk=[[r,c]],out=[];
+  while(stk.length){
+    const[x,y]=stk.pop(),k=x*BS+y;
+    if(vis.has(k))continue; vis.add(k); out.push([x,y]);
+    for(const[dr,dc]of DIRS){
+      const nx=x+dr,ny=y+dc;
+      if(inB(nx,ny)&&b[nx][ny]===col&&!vis.has(nx*BS+ny))stk.push([nx,ny]);
+    }
+  }
+  return out;
+}
+function libs(b,grp){
+  const s=new Set();
+  for(const[x,y]of grp)for(const[dr,dc]of DIRS){
+    const nx=x+dr,ny=y+dc;
+    if(inB(nx,ny)&&b[nx][ny]===EMPTY)s.add(nx*BS+ny);
+  }
+  return s.size;
+}
+function apply(b,r,c,pl){
+  if(b[r][c]!==EMPTY)return null;
+  const nb=copyB(b); nb[r][c]=pl;
+  const opp=pl===BLACK?WHITE:BLACK;
+  let captured=0; const capturedPos=[];
+  for(const[dr,dc]of DIRS){
+    const nx=r+dr,ny=c+dc;
+    if(inB(nx,ny)&&nb[nx][ny]===opp){
+      const g=group(nb,nx,ny);
+      if(libs(nb,g)===0){for(const p of g){nb[p[0]][p[1]]=EMPTY;capturedPos.push(p);}captured+=g.length;}
+    }
+  }
+  if(libs(nb,group(nb,r,c))===0)return null;
+  return{nb,captured,capturedPos};
+}
+function valid(b,r,c,pl,prev,pprev){
+  if(b[r][c]!==EMPTY)return false;
+  const res=apply(b,r,c,pl); if(!res)return false;
+  if(prev&&bEq(res.nb,prev))return false;
+  if(pprev&&bEq(res.nb,pprev))return false;
+  return true;
+}
+
+// ── Scoring ───────────────────────────────────────────────────
+function score(b){
+  const vis=new Set(); let bt=0,wt=0,bs=0,ws=0;
+  for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){
+    if(b[r][c]===BLACK)bs++;
+    else if(b[r][c]===WHITE)ws++;
+    if(b[r][c]===EMPTY&&!vis.has(r*BS+c)){
+      const rgn=[],q=[[r,c]]; let tb=false,tw=false;
+      while(q.length){
+        const[x,y]=q.shift(),k=x*BS+y;
+        if(vis.has(k))continue; vis.add(k);
+        if(b[x][y]===EMPTY){
+          rgn.push([x,y]);
+          for(const[dr,dc]of DIRS){const nx=x+dr,ny=y+dc;if(inB(nx,ny)&&!vis.has(nx*BS+ny))q.push([nx,ny]);}
+        }else if(b[x][y]===BLACK)tb=true;else tw=true;
+      }
+      if(tb&&!tw)bt+=rgn.length; else if(tw&&!tb)wt+=rgn.length;
+    }
+  }
+  return{bt,wt,bs,ws};
+}
+function getTerritoryMap(b){
+  const map=Array.from({length:BS},()=>new Int8Array(BS));
+  const vis=new Set();
+  for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){
+    if(b[r][c]===EMPTY&&!vis.has(r*BS+c)){
+      const rgn=[],q=[[r,c]]; let tb=false,tw=false;
+      while(q.length){
+        const[x,y]=q.shift(),k=x*BS+y;
+        if(vis.has(k))continue; vis.add(k);
+        if(b[x][y]===EMPTY){
+          rgn.push([x,y]);
+          for(const[dr,dc]of DIRS){const nx=x+dr,ny=y+dc;if(inB(nx,ny)&&!vis.has(nx*BS+ny))q.push([nx,ny]);}
+        }else if(b[x][y]===BLACK)tb=true;else tw=true;
+      }
+      const owner=(tb&&!tw)?BLACK:(tw&&!tb)?WHITE:0;
+      for(const[x,y]of rgn)map[x][y]=owner;
+    }
+  }
+  return map;
+}
+
+// ── AI: Minimax + Alpha-Beta ──────────────────────────────────
+function evaluate(b,bc,wc){
+  const s=score(b),cx=Math.floor(BS/2);
+  let v=(s.bt-s.wt)*2.8+(bc-wc)*3.2+(s.bs-s.ws)*0.5;
+  const seen=new Set();
+  for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){
+    if(b[r][c]!==EMPTY&&!seen.has(r*BS+c)){
+      const g=group(b,r,c),l=libs(b,g);
+      for(const[gx,gy]of g)seen.add(gx*BS+gy);
+      const sign=b[r][c]===BLACK?1:-1;
+      v+=sign*(l*0.35);
+      if(l===1)v+=sign*(-2.5);
+      v+=sign*(g.length*0.15);
+    }
+  }
+  for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){
+    if(b[r][c]!==EMPTY){
+      const d=Math.abs(r-cx)+Math.abs(c-cx);
+      v+=(b[r][c]===BLACK?1:-1)*(3-d)*0.12;
+    }
+  }
+  return v;
+}
+function orderedMoves(b,pl,prev,pprev){
+  const moves=[],cx=Math.floor(BS/2),opp=pl===BLACK?WHITE:BLACK;
+  for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){
+    if(!valid(b,r,c,pl,prev,pprev))continue;
+    let sc=(4-Math.abs(r-cx)-Math.abs(c-cx))*0.7;
+    for(const[dr,dc]of DIRS){
+      const nx=r+dr,ny=c+dc; if(!inB(nx,ny))continue;
+      if(b[nx][ny]===opp){const g=group(b,nx,ny),l=libs(b,g);sc+=(4-l)*2.8;if(l===1)sc+=8;}
+      if(b[nx][ny]===pl){sc+=0.4;const g=group(b,nx,ny),l=libs(b,g);if(l===1)sc+=5;}
+    }
+    moves.push({r,c,sc});
+  }
+  return moves.sort((a,b)=>b.sc-a.sc).slice(0,14);
+}
+function minimax(b,depth,alpha,beta,bc,wc,prev,pprev,isMax){
+  nodesExplored++;
+  if(depth===0)return evaluate(b,bc,wc);
+  const pl=isMax?BLACK:WHITE;
+  const moves=orderedMoves(b,pl,prev,pprev);
+  if(!moves.length)return minimax(b,depth-1,alpha,beta,bc,wc,null,prev,!isMax);
+  if(isMax){
+    let best=-Infinity;
+    for(const m of moves){
+      const res=apply(b,m.r,m.c,BLACK); if(!res)continue;
+      const v=minimax(res.nb,depth-1,alpha,beta,bc+res.captured,wc,b,prev,false);
+      if(v>best)best=v; if(v>alpha)alpha=v; if(beta<=alpha)break;
+    }
+    return best;
+  }else{
+    let best=Infinity;
+    for(const m of moves){
+      const res=apply(b,m.r,m.c,WHITE); if(!res)continue;
+      const v=minimax(res.nb,depth-1,alpha,beta,bc,wc+res.captured,b,prev,true);
+      if(v<best)best=v; if(v<beta)beta=v; if(beta<=alpha)break;
+    }
+    return best;
+  }
+}
+function bestMove(b,bc,wc,prev,pprev){
+  const moves=orderedMoves(b,WHITE,prev,pprev);
+  if(!moves.length)return null;
+  nodesExplored=0;
+  const t0=performance.now();
+  let best=Infinity,bm=null;
+  for(const m of moves){
+    const res=apply(b,m.r,m.c,WHITE); if(!res)continue;
+    const v=minimax(res.nb,3,-Infinity,Infinity,bc,wc+res.captured,b,prev,true);
+    if(v<best){best=v;bm=m;}
+  }
+  const elapsed=performance.now()-t0;
+  const nps=elapsed>0?Math.round(nodesExplored/(elapsed/1000)):0;
+  document.getElementById('nodesPerSec').textContent=nps>1000?(nps/1000).toFixed(1)+'k':String(nps);
+  return bm;
+}
+
+// ── Rendering ─────────────────────────────────────────────────
+function posXY(r,c){return{x:PAD+c*CELL,y:PAD+r*CELL};}
+function nearestIntersection(x,y){
+  const c=Math.round((x-PAD)/CELL),r=Math.round((y-PAD)/CELL);
+  return inB(r,c)?{r,c}:null;
+}
+function rndRect(x,y,w,h,rad){
+  ctx.beginPath();
+  ctx.moveTo(x+rad,y); ctx.lineTo(x+w-rad,y);
+  ctx.arcTo(x+w,y,x+w,y+rad,rad); ctx.lineTo(x+w,y+h-rad);
+  ctx.arcTo(x+w,y+h,x+w-rad,y+h,rad); ctx.lineTo(x+rad,y+h);
+  ctx.arcTo(x,y+h,x,y+h-rad,rad); ctx.lineTo(x,y+rad);
+  ctx.arcTo(x,y,x+rad,y,rad); ctx.closePath();
+}
+function render(){
+  ctx.clearRect(0,0,SZ,SZ);
+  drawBoard();
+  if(showTerr)drawTerritory();
+  if(!animating)drawHover();
+  drawStones();
+  if(lastMv)drawLastMark(lastMv[0],lastMv[1]);
+}
+function drawBoard(){
+  ctx.fillStyle='#C8923A'; rndRect(0,0,SZ,SZ,4); ctx.fill();
+  ctx.save(); ctx.globalAlpha=0.035; ctx.strokeStyle='#5A2E0A'; ctx.lineWidth=0.8;
+  for(let i=-SZ;i<SZ*2;i+=12){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+SZ,SZ);ctx.stroke();}
+  ctx.restore();
+  ctx.strokeStyle='#7A4E12'; ctx.lineWidth=0.8;
+  for(let i=0;i<BS;i++){
+    const{x:x0,y:y0}=posXY(i,0),{x:x1}=posXY(i,BS-1);
+    ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y0);ctx.stroke();
+    const{x:xa,y:ya}=posXY(0,i),{y:yb}=posXY(BS-1,i);
+    ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xa,yb);ctx.stroke();
+  }
+  ctx.fillStyle='#5E3A0A';
+  [[2,2],[1,1],[1,3],[3,1],[3,3]].forEach(([r,c])=>{
+    const{x,y}=posXY(r,c);
+    ctx.beginPath();ctx.arc(x,y,(r===2&&c===2)?5:3.5,0,Math.PI*2);ctx.fill();
+  });
+  ctx.font="bold 11px 'JetBrains Mono',monospace";
+  ctx.fillStyle='rgba(94,58,10,.65)';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  for(let i=0;i<BS;i++){
+    const{x}=posXY(0,i);ctx.fillText(COLS[i],x,PAD/2-2);
+    const{y}=posXY(i,0);ctx.fillText(BS-i,PAD/2-10,y);
+  }
+  ctx.strokeStyle='rgba(122,74,26,.5)';ctx.lineWidth=1.5;rndRect(1,1,SZ-2,SZ-2,4);ctx.stroke();
+}
+function drawTerritory(){
+  const map=getTerritoryMap(board);
+  for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){
+    if(board[r][c]===EMPTY&&map[r][c]!==0){
+      const{x,y}=posXY(r,c);
+      ctx.fillStyle=map[r][c]===BLACK?'rgba(10,9,6,.28)':'rgba(255,200,100,.32)';
+      rndRect(x-12,y-12,24,24,3);ctx.fill();
+      ctx.fillStyle=map[r][c]===BLACK?'rgba(10,9,6,.5)':'rgba(200,146,58,.7)';
+      rndRect(x-5,y-5,10,10,1);ctx.fill();
+    }
+  }
+}
+function drawHover(){
+  if(!hov||over||animating)return;
+  const{r,c}=hov;
+  if(!valid(board,r,c,player,prevBoard,prevPrevBoard))return;
+  const{x,y}=posXY(r,c);
+  ctx.save();ctx.globalAlpha=0.35;drawStone(x,y,player,SR*0.9);ctx.restore();
+  ctx.beginPath();ctx.arc(x,y,SR+4,0,Math.PI*2);
+  ctx.strokeStyle=player===BLACK?'rgba(10,9,6,.3)':'rgba(242,237,227,.5)';
+  ctx.lineWidth=1;ctx.stroke();
+}
+function drawStone(x,y,col,rad){
+  ctx.save();ctx.translate(x,y);
+  ctx.beginPath();ctx.arc(0,0,rad,0,Math.PI*2);
+  if(col===BLACK){
+    const g=ctx.createRadialGradient(-rad*.3,-rad*.3,rad*.1,0,0,rad);
+    g.addColorStop(0,'#4A4744');g.addColorStop(1,'#0A0906');
+    ctx.fillStyle=g;ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=0.5;ctx.stroke();
+    ctx.save();ctx.globalAlpha=0.25;
+    ctx.beginPath();ctx.arc(-rad*.3,-rad*.3,rad*.25,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.5)';ctx.fill();ctx.restore();
+  }else{
+    const g=ctx.createRadialGradient(-rad*.3,-rad*.35,rad*.05,0,0,rad*1.1);
+    g.addColorStop(0,'#FFFFFF');g.addColorStop(0.5,'#F0EAD8');g.addColorStop(1,'#C8C0A8');
+    ctx.fillStyle=g;ctx.fill();
+    ctx.strokeStyle='rgba(90,60,20,.35)';ctx.lineWidth=1;ctx.stroke();
+    ctx.save();ctx.globalAlpha=0.12;
+    ctx.beginPath();ctx.arc(rad*.1,rad*.15,rad*.3,0,Math.PI*2);
+    ctx.strokeStyle='rgba(100,70,20,.4)';ctx.lineWidth=0.7;ctx.stroke();ctx.restore();
+  }
+  ctx.restore();
+}
+function drawStones(){
+  for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){
+    if(board[r][c]!==EMPTY){const{x,y}=posXY(r,c);drawStone(x,y,board[r][c],SR);}
+  }
+}
+function drawLastMark(r,c){
+  const{x,y}=posXY(r,c),col=board[r][c];
+  ctx.beginPath();ctx.arc(x,y,SR*.32,0,Math.PI*2);
+  ctx.fillStyle=col===BLACK?'rgba(242,237,227,.85)':'rgba(10,9,6,.55)';ctx.fill();
+}
+
+// ── Animations ────────────────────────────────────────────────
+function animPlace(r,c,col,done){
+  animating=true;
+  const{x,y}=posXY(r,c),t0=performance.now(),dur=240;
+  (function frame(now){
+    const t=Math.min(1,(now-t0)/dur);
+    const sc=t<0.6?(t/0.6)*1.1:1.1-((t-0.6)/0.4)*0.1;
+    render();
+    ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);ctx.translate(-x,-y);
+    drawStone(x,y,col,SR);ctx.restore();
+    if(t<1)requestAnimationFrame(frame);
+    else{animating=false;done&&done();}
+  })(t0);
+}
+function animCaptures(positions,col,done){
+  const t0=performance.now(),dur=380;
+  const particles=positions.map(([r,c])=>{
+    const{x,y}=posXY(r,c),angle=Math.random()*Math.PI*2,speed=15+Math.random()*25;
+    return{x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-10};
+  });
+  (function frame(now){
+    const t=Math.min(1,(now-t0)/dur),fade=1-Math.pow(t,2);
+    render();ctx.save();
+    particles.forEach(p=>{
+      const px2=p.x+p.vx*t,py2=p.y+p.vy*t+30*t*t;
+      ctx.globalAlpha=fade*0.85;
+      ctx.beginPath();ctx.arc(px2,py2,SR*(1-t*0.6),0,Math.PI*2);
+      if(col===BLACK){ctx.fillStyle='#0A0906';ctx.fill();}
+      else{ctx.fillStyle='#F0EAD8';ctx.fill();ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=1;ctx.stroke();}
+    });
+    ctx.restore();
+    if(t<1)requestAnimationFrame(frame);else done&&done();
+  })(t0);
+}
+
+// ── Game logic ────────────────────────────────────────────────
+function execMove(r,c,pl,done){
+  const res=apply(board,r,c,pl); if(!res)return false;
+  caps[pl]+=res.captured;
+  prevPrevBoard=prevBoard;
+  prevBoard=copyB(board);
+  lastMv=[r,c];
+  moveLog.push({pl,r,c,pos:COLS[c]+(BS-r),captured:res.captured});
+  animPlace(r,c,pl,()=>{
+    board=res.nb;
+    if(res.capturedPos.length){
+      animCaptures(res.capturedPos,pl===BLACK?WHITE:BLACK,()=>{render();updateUI();done&&done();});
+    }else{render();updateUI();done&&done();}
+  });
+  return true;
+}
+function handleTurnEnd(wasPass){
+  if(!wasPass)passes=0;
+  player=player===BLACK?WHITE:BLACK;
+  updateUI();render();
+  if(!checkEnd()&&player===WHITE)aiTimerId=setTimeout(doAI,420);
+}
+function placeStone(r,c){
+  if(over||animating||player!==BLACK)return;
+  if(!valid(board,r,c,BLACK,prevBoard,prevPrevBoard))return;
+  passes=0;
+  execMove(r,c,BLACK,()=>handleTurnEnd(false));
+}
+function passTurn(){
+  if(over||animating)return;
+  passes++;
+  moveLog.push({pl:player,r:-1,c:-1,pos:'pass',captured:0});
+  updateUI();
+  if(passes>=2){endGame();return;}
+  handleTurnEnd(true);
+}
+function doAI(){
+  if(over)return;
+  setDot('thinking');
+  document.getElementById('turnText').textContent='AI calculating…';
+  document.getElementById('thinkSub').innerHTML='<span class="dots"><span></span><span></span><span></span></span>';
+  document.getElementById('aiStatusTag').textContent='AI Thinking';
+  document.getElementById('aiStatusTag').style.background='var(--gold)';
+  document.getElementById('aiStatusTag').style.color='var(--ink)';
+  setTimeout(()=>{
+    const mv=bestMove(board,caps[BLACK],caps[WHITE],prevBoard,prevPrevBoard);
+    document.getElementById('thinkSub').innerHTML='';
+    document.getElementById('aiStatusTag').textContent='Human Turn';
+    document.getElementById('aiStatusTag').style.background='';
+    document.getElementById('aiStatusTag').style.color='';
+    if(!mv){
+      passes++;
+      moveLog.push({pl:WHITE,r:-1,c:-1,pos:'pass',captured:0});
+      updateUI();
+      if(passes>=2){endGame();return;}
+      player=BLACK;setDot('black');
+      document.getElementById('turnText').textContent='Your move';
+      render();return;
+    }
+    passes=0;
+    execMove(mv.r,mv.c,WHITE,()=>handleTurnEnd(false));
+  },60);
+}
+function undoMove(){
+  if(over||animating||moveLog.length<1)return;
+  if(aiTimerId){clearTimeout(aiTimerId);aiTimerId=null;}
+  const toUndo=moveLog.length>=2?2:1;
+  for(let i=0;i<toUndo;i++)moveLog.pop();
+  replayFromLog();
+}
+function replayFromLog(){
+  const saved=[...moveLog];
+  resetGame(true);
+  for(const m of saved){
+    if(m.r<0){
+      passes++;
+      if(passes>=2){endGame();return;}
+      player=player===BLACK?WHITE:BLACK;
+      moveLog.push(m);continue;
+    }
+    const res=apply(board,m.r,m.c,m.pl);
+    if(res){board=res.nb;caps[m.pl]+=res.captured;prevPrevBoard=prevBoard;prevBoard=copyB(board);lastMv=[m.r,m.c];}
+    player=player===BLACK?WHITE:BLACK;
+    moveLog.push(m);
+  }
+  updateUI();render();
+}
+function checkEnd(){
+  // NOTE: uses nested loop — board rows are Int8Arrays, .flat() doesn't work on them
+  let empty=0;
+  for(let r=0;r<BS;r++)for(let c=0;c<BS;c++)if(board[r][c]===0)empty++;
+  if(empty===0||moveLog.filter(m=>m.r>=0).length>=50){endGame();return true;}
+  return false;
+}
+function endGame(){
+  over=true;
+  const s=score(board);
+  const bFinal=s.bt+caps[BLACK],wFinal=s.wt+caps[WHITE]+KOMI;
+  const winner=bFinal>wFinal?'Black wins':'White wins';
+  const margin=Math.abs(bFinal-wFinal).toFixed(1);
+  document.getElementById('ovTitle').textContent=winner;
+  document.getElementById('ovSub').textContent='by '+margin+' points · komi '+KOMI;
+  document.getElementById('ovB').textContent=bFinal.toFixed(1);
+  document.getElementById('ovW').textContent=wFinal.toFixed(1);
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('aiStatusTag').textContent='Game Over';
+  setDot('over');
+  canvas.classList.remove('ai-turn');canvas.classList.add('over');
+  document.getElementById('turnText').textContent='Game over';
+  updateUI();
+}
+function toggleTerritory(){
+  showTerr=!showTerr;
+  document.getElementById('terrBtn').classList.toggle('toggled',showTerr);
+  document.getElementById('terrLegend').classList.toggle('show',showTerr);
+  render();
+}
+function resetGame(silent){
+  if(aiTimerId){clearTimeout(aiTimerId);aiTimerId=null;}
+  board=mk();prevBoard=null;prevPrevBoard=null;
+  caps={[BLACK]:0,[WHITE]:0};
+  player=BLACK;moveLog=[];over=false;passes=0;lastMv=null;
+  animating=false;hov=null;
+  document.getElementById('overlay').classList.remove('show');
+  canvas.classList.remove('ai-turn','over');
+  document.getElementById('nodesPerSec').textContent='—';
+  document.getElementById('aiStatusTag').textContent='Human Turn';
+  document.getElementById('aiStatusTag').style.background='';
+  document.getElementById('aiStatusTag').style.color='';
+  if(!silent){
+    showTerr=false;
+    document.getElementById('terrBtn').classList.remove('toggled');
+    document.getElementById('terrLegend').classList.remove('show');
+  }
+  updateUI();render();
+}
+
+// ── UI updates ────────────────────────────────────────────────
+function setDot(cls){document.getElementById('dot').className='dot '+cls;}
+
+function updateUI(){
+  if(!over){
+    if(player===BLACK){
+      setDot('black');
+      document.getElementById('turnText').textContent='Your move';
+      canvas.classList.remove('ai-turn');
+    }else{
+      setDot('white');
+      document.getElementById('turnText').textContent='AI — white';
+      canvas.classList.add('ai-turn');
+    }
+  }
+  document.getElementById('bCap').textContent=caps[BLACK];
+  document.getElementById('wCap').textContent=caps[WHITE];
+  const total=caps[BLACK]+caps[WHITE];
+  const pct=total>0?(caps[BLACK]/total)*100:50;
+  document.getElementById('capBar').style.width=Math.max(5,Math.min(95,pct))+'%';
+  const s=score(board);
+  const bS=(s.bt+caps[BLACK]).toFixed(1),wS=(s.wt+caps[WHITE]+KOMI).toFixed(1);
+  document.getElementById('bScore').textContent=bS;
+  document.getElementById('wScore').textContent=wS;
+  const bN=parseFloat(bS),wN=parseFloat(wS),tot=bN+wN;
+  const epct=tot>0?(bN/tot)*100:50;
+  document.getElementById('evalFill').style.width=Math.max(5,Math.min(95,epct))+'%';
+  const mn=moveLog.filter(m=>m.r>=0).length;
+  document.getElementById('moveNumDisplay').textContent=String(mn).padStart(2,'0');
+
+  // ── History list — built with string concatenation (no template literals) ──
+  // This avoids any risk of unclosed backtick bugs that broke the previous version.
+  const hist=document.getElementById('histList');
+  if(!moveLog.length){
+    hist.innerHTML='<div class="h-empty">Waiting for first move\u2026</div>';
+    return;
+  }
+  var html='';
+  for(var i=0;i<moveLog.length;i++){
+    var m=moveLog[i];
+    var isLast=i===moveLog.length-1;
+    var cls=m.pl===BLACK?'black-move':'white-move';
+    var capStr=m.captured>0?' +'+m.captured:'';
+    var numStr=m.r>=0?(i+1)+'.':'';
+    html+='<div class="h-row '+cls+(isLast?' last':'')+'">'+
+            '<span class="h-n">'+numStr+'</span>'+
+            '<div class="h-dot"></div>'+
+            '<span class="h-coord">'+m.pos+capStr+'</span>'+
+          '</div>';
+  }
+  hist.innerHTML=html;
+  hist.scrollTop=hist.scrollHeight;
+}
+
+// ── Events ────────────────────────────────────────────────────
+canvas.addEventListener('click',function(e){
+  var rect=canvas.getBoundingClientRect();
+  var x=(e.clientX-rect.left)*(SZ/rect.width);
+  var y=(e.clientY-rect.top)*(SZ/rect.height);
+  var p=nearestIntersection(x,y);
+  if(p)placeStone(p.r,p.c);
+});
+canvas.addEventListener('mousemove',function(e){
+  var rect=canvas.getBoundingClientRect();
+  var x=(e.clientX-rect.left)*(SZ/rect.width);
+  var y=(e.clientY-rect.top)*(SZ/rect.height);
+  var p=nearestIntersection(x,y);
+  if(!p||(hov&&hov.r===p.r&&hov.c===p.c))return;
+  hov=p;if(!animating)render();
+});
+canvas.addEventListener('mouseleave',function(){hov=null;if(!animating)render();});
+canvas.addEventListener('touchend',function(e){
+  e.preventDefault();
+  var touch=e.changedTouches[0];
+  var rect=canvas.getBoundingClientRect();
+  var x=(touch.clientX-rect.left)*(SZ/rect.width);
+  var y=(touch.clientY-rect.top)*(SZ/rect.height);
+  var p=nearestIntersection(x,y);
+  if(p)placeStone(p.r,p.c);
+},{passive:false});
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT')return;
+  var k=e.key.toLowerCase();
+  if(k==='p')passTurn();
+  if(k==='r')resetGame();
+  if(k==='t')toggleTerritory();
+  if(k==='z'){e.preventDefault();undoMove();}
+});
+
+// ── Init ──────────────────────────────────────────────────────
+resetGame();
+</script>
+</body>
+</html>
