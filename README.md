@@ -246,20 +246,6 @@ The TT stores `{ depth, val, flag }` keyed by Zobrist hash. Three flag types imp
 
 The table is cleared at the start of each AI turn and evicted entirely when it exceeds 400,000 entries.
 
----
-
-## SGF Format
-
-Export produces a standards-compliant FF[4] SGF string:
-
-```
-(;FF[4]GM[1]SZ[9]KM[6.5]CA[UTF-8]AP[StoneGarden:4.0]
-;B[pd];W[dp];B[pp];W[dd]...)
-```
-
-Import accepts any FF[4] SGF with `SZ[5]`, `SZ[7]`, or `SZ[9]`. Passes are encoded as `;B[]` / `;W[]`. The parser uses a single regex `(/;([BW])\[([a-s]{0,2})\]/g)` for robustness.
-
-
 **Live deployment:** [https://go-game-ai.netlify.app/](https://go-game-ai.netlify.app/)
 
 ## Rules Reference
